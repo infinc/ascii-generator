@@ -5,6 +5,7 @@ import math
 import mimetypes
 import sys
 import time
+import numpy as np
 
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
@@ -13,9 +14,10 @@ ASCII_CHARS_IMPACT = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdb
 ASCII_CHARS_CYBER = "  .-+=<>!?0123456789$#@"
 ASCII_CHARS_JAPANESE = "  .、トニコキホマ国魔驚鬱"
 ASCII_CHARS_MINIMAL = "  .:+@"
-ASCII_CHARS_LINE = "   .,-_~\/|()[]{}+*#%"
 
 
+choice = None
+path = None
 new_width = None
 new_height = None
 skip_frames = None
@@ -26,7 +28,31 @@ terminal = None
 colored_char = None
 gen = None
 
+
+def userChoice():
+    global choice
+    print("-------ASCII ART ASSISTANT---------")
+    print("1: Generate a monochrome ASCII ART")
+    print("2: Generate a color ASCII ART")
+    print("3: Play a gif file with ASCII ART")
+    print("4: Convert ASCII ART to png file")
+    choice = int(input("Your choice: "))
+
+
+def gainPath(extension):
+    global path
+    print("Ex) cat.jpeg")
+    print(f"This generator supports: {extension}")
+    print("If you want to use sample, type s and press enter")
+    path = input("Enter the path: ")
+    if path == "s":
+        print("You selected sample")
+        path = "./cat.jpeg"
+
+
 def change_size_function(width, height):
+    global new_width
+    global new_height
     question = input("Would you like to change a size?[y/n]: ")
 
     if question == "y" or question == "Y":
@@ -35,7 +61,7 @@ def change_size_function(width, height):
         except ValueError:
             print("Error was occurred")
             new_width = width
-        ratio = math.ceil(width / height)
+        # ratio = math.ceil(width / height)
         factor = float(input("Input a correction factor (normal=0.55): "))
         new_height = math.ceil(height * (new_width / width) * factor)
     elif question == "n" or question == "N":
@@ -50,88 +76,11 @@ def change_size_function(width, height):
     return new_width, new_height
 
 
-
-
-
-print("-------ASCII ART GENERATOR---------")
-print("Ex) cat.jpeg")
-print("This generator supports: jpg, jpeg, png, webp, gif")
-print("If you want to use sample, type s and press enter")
-path = input("Enter the path: ")
-if path == "s":
-    print("You selected sample")
-    path = "./cat.jpeg"
-
-
-if path.lower().endswith(".gif"):
-    print("You selected gif")
-    identify = "gif"
-    cap = cv2.VideoCapture(path)
-
-    if not cap.isOpened():
-        print("Error was occurred")
-        print("Aborted")
-        sys.exit()
-
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if fps == 0 or fps != fps:
-        fps = 15.0
-    sleep_time = 1.0 / fps
-    print("This gifs ratio is (width:height)" + str(width) + ":" + str(height))
-    new_width, new_height = change_size_function(width, height)
-    speed_factor = float(input("Choose a playback speed(normal=1.0, 2x=2.0): "))
-    sleep_time = sleep_time / speed_factor
-
-
-else:
-    mime_type, _ = mimetypes.guess_type(path)
-    if mime_type and mime_type.startswith('image'):
-        print("You selected image")
-        identify = "image"
-        img = cv2.imread(path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        height, width = gray.shape
-        print("This photos ratio is (width:height)" + str(width) + ":" + str(height))
-        new_width, new_height = change_size_function(width, height)
-
-
-
-    elif mime_type and mime_type.startswith('video'):
-        print("You selected video")
-        identify = "video"
-        cap = cv2.VideoCapture(path)
-        if not cap.isOpened():
-            print("Error was occurred")
-            print("Aborted")
-            sys.exit()
-
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        print("This videos ratio is (width:height)" + str(width) + ": " + str(height))
-        print("FPS: " + str(int(fps)))
-        new_width, new_height = change_size_function(width, height)
-        skip_frames = int(input("How many frames to skip? (normal=1 or 2): "))
-        sleep_time = (1.0 / fps) * skip_frames if fps > 0 else 0.05
-
-        print("\n--- Starting Video in 3 seconds... Press Ctrl+C to stop ---")
-        time.sleep(3)
-
-
-    else:
-        print("You selected wrong file")
-        print("Aborted")
-        sys.exit()
-
-
-
 def ascii_chars_list():
     print("1: " + ASCII_CHARS_NORMAL)
     print("2: " + ASCII_CHARS_BLOCK)
     print("3: " + ASCII_CHARS_IMPACT)
+
 
 def rgb_to_256(r, g, b):
     r_idx = round(r / 255 * 5)
@@ -149,6 +98,8 @@ def gray_generator(chars, pixels, width):
 
 
 def rgb_generator(chars, pixels_rgb, pixels_gray, ter):
+    global gen
+    global colored_char
     num_chars = len(chars)
     gen = []
 
@@ -173,6 +124,7 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter):
             gen.append("\033[0m\n")
 
     return "".join(gen)
+
 
 def image_to_ascii_gray(gray, width, height):
     resized_image = cv2.resize(gray, (width, height))
@@ -260,22 +212,99 @@ def gif_to_ascii_gray(width, height):
         cap.release()
 
 
+def ascii_to_image(chars):
+    global path
+    global new_height
+    global new_width
 
-if identify == "image":
-    color = input("Which do you prefer, color or gray?[r/g]:")
-    if color == "r":
-        terminal = input("Which do you use, True Color(iTerm2,Pycharm,etc) or RGB(Terminal,etc)?[t/r]: ")
-        image_to_ascii_rgb(gray, rgb, new_width, new_height, terminal)
-    elif color == "g":
-        image_to_ascii_gray(gray, new_width, new_height)
-    else:
-        print("You inputted wrong choice")
-        print("Aborted")
-        sys.exit()
-elif identify == "video":
-    video_to_ascii_gray()
-elif identify == "gif":
-    gif_to_ascii_gray(new_width, new_height)
+    if not os.path.exists(path):
+        print(f"エラー: {path} が見つかりません。")
+        return
+    with open(path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    new_height = len(lines)
+    new_width = len(lines[0])
+    num_chars = len(chars)
+    char_to_gray = {
+        char: int((i / (num_chars - 1)) * 255) for i, char in enumerate(chars)
+    }
+    img_array = np.zeros((new_height, new_width), dtype=np.uint8)
+    for y, line in enumerate(lines):
+        current_width = min(len(line), new_width)
+        for x in range(current_width):
+            char = line[x]
+            img_array[y, x] = char_to_gray.get(char, 0)
+
+    cv2.imwrite("GeneratedPhotos.png", img_array)
+    print("Generated completely")
+    print("This photos ratio is (width:height)" + str(new_width) + ": " + str(new_height))
 
 
-print("Generated completely")
+userChoice()
+
+match choice:
+    case 1:
+        gainPath("jpg jpeg png webp")
+        mime_type, _ = mimetypes.guess_type(path)
+        if mime_type and mime_type.startswith('image'):
+            img = cv2.imread(path)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            height, width = gray.shape
+            print("This photos ratio is (width:height)" + str(width) + ":" + str(height))
+            new_width, new_height = change_size_function(width, height)
+            image_to_ascii_gray(gray, new_width, new_height)
+            print("Generated completely")
+
+    case 2:
+        gainPath("jpeg jpeg png webp")
+        mime_type, _ = mimetypes.guess_type(path)
+        if mime_type and mime_type.startswith('image'):
+            img = cv2.imread(path)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            height, width = gray.shape
+            print("This photos ratio is (width:height)" + str(width) + ":" + str(height))
+            new_width, new_height = change_size_function(width, height)
+            terminal = input("Which do you use, True Color(iTerm2,Pycharm,etc) or RGB(Terminal,etc)?[t/r]: ")
+            image_to_ascii_rgb(gray, rgb, new_width, new_height, terminal)
+            print("Generated completely")
+
+    case 3:
+        gainPath("gif")
+        mime_type, _ = mimetypes.guess_type(path)
+        if mime_type and (mime_type.startswith('video') or 'gif' in mime_type):
+            cap = cv2.VideoCapture(path)
+            if not cap.isOpened():
+                print("Error was occurred")
+                print("Aborted")
+                sys.exit()
+
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            print("This videos ratio is (width:height)" + str(width) + ": " + str(height))
+            print("FPS: " + str(int(fps)))
+            new_width, new_height = change_size_function(width, height)
+            skip_frames = int(input("How many frames to skip? (normal=1 or 2): "))
+            sleep_time = (1.0 / fps) * skip_frames if fps > 0 else 0.05
+            gif_to_ascii_gray(new_width, new_height)
+            print("Generated completely")
+
+    case 4:
+        gainPath("txt")
+        mime_type, _ = mimetypes.guess_type(path)
+        if mime_type == 'text/plain':
+            ascii_chars_list()
+            print("To convert to image, You have to choose chars which used in the generation")
+            choose = input("Choose characters: ")
+            if choose == "1":
+                selected_chars = ASCII_CHARS_NORMAL
+            elif choose == "2":
+                selected_chars = ASCII_CHARS_BLOCK
+            elif choose == "3":
+                selected_chars = ASCII_CHARS_IMPACT
+            else:
+                sys.exit()
+            ascii_to_image(selected_chars)
