@@ -1,5 +1,5 @@
 import os
-
+import chat
 import cv2
 import math
 import mimetypes
@@ -36,6 +36,7 @@ def userChoice():
     print("2: Generate a color ASCII ART")
     print("3: Play a gif file with ASCII ART")
     print("4: Convert ASCII ART to png file")
+    print("5: Chat with other people by using achex")
     choice = int(input("Your choice: "))
 
 
@@ -125,6 +126,14 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter):
 
     return "".join(gen)
 
+def save_ascii_art(result):
+    if input("You want to save ASCII ART as .txt?[y:n]: ") == "y":
+        with open("generated-art.txt", "w", encoding="utf-8") as f:
+            f.write(result)
+            print("Saved as generated-art.txt")
+    else:
+        return
+
 
 def image_to_ascii_gray(gray, width, height):
     resized_image = cv2.resize(gray, (width, height))
@@ -134,11 +143,17 @@ def image_to_ascii_gray(gray, width, height):
     ascii_chars_list()
     choose = input("Choose characters: ")
     if choose == "1":
-        print(gray_generator(ASCII_CHARS_NORMAL, pixels, width))
+        result = gray_generator(ASCII_CHARS_NORMAL, pixels, width)
+        print(result)
+        save_ascii_art(result)
     elif choose == "2":
-        print(gray_generator(ASCII_CHARS_BLOCK, pixels, width))
+        result = gray_generator(ASCII_CHARS_BLOCK, pixels, width)
+        print(result)
+        save_ascii_art(result)
     elif choose == "3":
-        print(gray_generator(ASCII_CHARS_IMPACT, pixels, width))
+        result = gray_generator(ASCII_CHARS_IMPACT, pixels, width)
+        print(result)
+        save_ascii_art(result)
     else:
         print("You inputted wrong choice")
         print("Aborted")
@@ -236,8 +251,8 @@ def ascii_to_image(chars):
             char = line[x]
             img_array[y, x] = char_to_gray.get(char, 0)
 
-    cv2.imwrite("GeneratedPhotos.png", img_array)
-    print("Generated completely")
+    cv2.imwrite("Generated-photos.png", img_array)
+    print("Saved as Generated-photos.png")
     print("This photos ratio is (width:height)" + str(new_width) + ": " + str(new_height))
 
 
@@ -308,3 +323,6 @@ match choice:
             else:
                 sys.exit()
             ascii_to_image(selected_chars)
+
+    case 5:
+        chat.start()
