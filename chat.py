@@ -4,43 +4,108 @@ import sys
 import websockets
 import ssl
 import traceback
+import os
 
 
-async def recive_messages(websocket, my_name):
+save = None
+
+async def receive_messages(websocket, my_name, room_name):
     try:
         async for message in websocket:
             data = json.loads(message)
 
             if data.get("auth") == "OK":
-                print("[System]Server authentication successful")
+                print("\r[System]Server authentication successful")
                 continue
-
             msg = data.get("message")
             if msg:
                 sender = data.get("id", "unknown")
-                print(f"[{sender}]: {msg}")
+                if msg.startswith("/opfiledm "):
+                    parts = msg.split("\n", 1)
+                    target_user = parts[0].replace("/opfiledm ", "").strip()
+                    if my_name == target_user:
+                        content = parts[1] if len(parts) > 1 else ""
+                        print(f"\r[{sender} (latest file)]:\n{content}")
+                        print(f"{my_name}: ", end="", flush=True)
+
+                    continue
+                print(f"\r{sender}: {msg}")
                 print(f"{my_name}: ", end="", flush=True)
 
+                if msg.strip() == "/show" and sender != my_name and save is not None:
+                    payload = {
+                        "to": room_name,
+                        "id": my_name,
+                        "message": f"/opfiledm {sender}\n{save}"
+                    }
+                    await websocket.send(json.dumps(payload))
     except websockets.exceptions.ConnectionClosed:
-        print("[System]Connection defused")
+        print("\r[System]Connection defused")
 
 
 async def send_messages(websocket, my_name, room_name):
+    global save
     loop = asyncio.get_running_loop()
 
     while True:
         msg = await loop.run_in_executor(None, input, f"{my_name}: ")
-
         if msg.lower() in ['exit', 'quit']:
-            print("[System]Disconnected")
+            print(f"\r[System]Disconnected")
             break
 
-        payload = {
-            "to": room_name,
-            "id": my_name,
-            "message": msg
-        }
-        await websocket.send(json.dumps(payload))
+        elif msg.startswith("/test "):
+            file = msg[6:].strip()
+
+            if os.path.exists(file):
+                try:
+                    with open(file, "r", encoding="utf-8") as f:
+                        file_content = f.read()
+                        list = [msg,
+                                "-----------------------------",
+                                f"{my_name} uploaded {file}.",
+                                f"To show {file}, type /show",
+                                "-----------------------------"]
+                        for i in range(len(list)):
+                            payload = {
+                                "to": room_name,
+                                "id": my_name,
+                                "message": list[i]
+                            }
+                            await websocket.send(json.dumps(payload))
+                            await asyncio.sleep(0.1)
+
+                    save = file_content
+                    # print(f"\r[Helper]Loaded {file}.")
+                    # save = msg
+                    # print(f"\r[Helper]To show {file}, type /show")
+
+                except Exception as e:
+                    print(f"\r[Helper]Failed to load {file}.")
+                    continue
+            else:
+                print(f"\r[Helper]{file} doesn't exist.")
+
+        elif msg.startswith("/show"):
+            if save is not None:
+                print(f"\r{save}")
+            else:
+                try:
+                    payload = {
+                        "to": room_name,
+                        "id": my_name,
+                        "message": msg
+                    }
+                    await websocket.send(json.dumps(payload))
+
+                except Exception:
+                    print(f"\r[Helper]No history found.")
+        else:
+            payload = {
+                "to": room_name,
+                "id": my_name,
+                "message": msg
+            }
+            await websocket.send(json.dumps(payload))
 
 
 async def main():
@@ -60,7 +125,7 @@ async def main():
         pass
 
     try:
-        print(f"[System]Connecting to {uri}...")
+        print(f"\r[System]Connecting to {uri}...")
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
@@ -69,21 +134,21 @@ async def main():
 
         async with websockets.connect(uri, ssl=ssl_context, additional_headers=headers) as websocket:
             auth_data = {
-                "auth": "ChatAPIHome",
-                "password": "48862303286"
+                "auth": room_name,
+                "password": "password110"
             }
             await websocket.send(json.dumps(auth_data))
-            await websocket.send(json.dumps({"to": "ChatAPIHome", "id": my_name, "message": "person joined"}))
+            await websocket.send(json.dumps({"to": room_name, "id": "[System]", "message": f"{my_name} joined"}))
 
-            print("[System]Connected. To leave the chat, type exit")
-            receive_task = asyncio.create_task(recive_messages(websocket, my_name))
+            print("\r[System]Connected. To leave the chat, type exit")
+            receive_task = asyncio.create_task(receive_messages(websocket, my_name, room_name))
             send_task = asyncio.create_task(send_messages(websocket, my_name, room_name))
 
             await send_task
             receive_task.cancel()
 
     except Exception as e:
-        print(f"[System]Error was occurred: {e}")
+        print(f"\r[System]Error was occurred: {e}")
         traceback.print_exc()
 
 
@@ -96,6 +161,6 @@ def start():
         print("2000")
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("[System]Error was occurred")
+        print("\r[System]Error was occurred")
 
 
