@@ -1,8 +1,8 @@
 import chat
-import cv2
-import mimetypes
-import sys
 import properties
+from properties import cv2
+from properties import mimetypes
+from properties import sys
 
 
 match properties.user_choice():

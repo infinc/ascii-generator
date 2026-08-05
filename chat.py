@@ -1,11 +1,14 @@
 import asyncio
 import json
-import sys
-import websockets
 import ssl
+import sys
 import traceback
-import os
+import websockets
 import properties
+from properties import os
+from properties import mimetypes
+from properties import cv2
+from properties import math
 
 save = None
 
@@ -24,10 +27,27 @@ async def receive_messages(websocket, my_name, room_name):
                 sender = data.get("id", "unknown")
                 if sender == my_name:
                     continue
-                if msg.startswith("/sync_save\n"):
+
+                if msg.startswith("/user"):
+                    target_user = msg.split(" ", 1)[1].strip()
+                    if my_name == target_user:
+                        payload = {
+                            "to": room_name,
+                            "id": my_name,
+                            "message": f"/opfounduser {sender}"
+                        }
+                        await websocket.send(json.dumps(payload))
+                    continue
+                elif msg.startswith("/opfounduser"):
+                    requester = msg.split(" ", 1)[1].strip()
+                    if my_name == requester:
+                        print(f"\r[System]{sender} is currently online.")
+                        print(f"{my_name}: ", end="", flush=True)
+                    continue
+                elif msg.startswith("/opsyncsave\n"):
                     save = msg.split("\n", 1)[1]
                     continue
-                if msg.startswith("/opfiledm "):
+                elif msg.startswith("/opfiledm "):
                     parts = msg.split("\n", 1)
                     target_user = parts[0].replace("/opfiledm ", "").strip()
                     if my_name == target_user:
@@ -67,6 +87,9 @@ async def send_messages(websocket, my_name, room_name):
         elif msg.startswith("/cmd"):
             properties.command_list()
 
+        elif msg.startswith("/generate "):
+            await instant_generate(msg, my_name, room_name, websocket)
+
         elif msg.startswith("/download"):
             if save is not None:
                 cmd_parts = msg.strip().split(maxsplit=1)
@@ -91,31 +114,8 @@ async def send_messages(websocket, my_name, room_name):
                 try:
                     with open(file, "r", encoding="utf-8") as f:
                         file_content = f.read()
-                        list = [msg,
-                                "-----------------------------",
-                                f"{my_name} uploaded {file}.",
-                                f"To show {file}, type /show",
-                                f"To download {file}, type /download",
-                                "-----------------------------"]
-                        for i in range(len(list)):
-                            payload = {
-                                "to": room_name,
-                                "id": my_name,
-                                "message": list[i]
-                            }
-                            if i != 0:
-                                print(f"\r{my_name}: {list[i]}")
-                            await websocket.send(json.dumps(payload))
-                            await asyncio.sleep(0.1)
+                    await uploaded(file_content, file, room_name, my_name, websocket, msg)
 
-                        sync_payload = {
-                            "to": room_name,
-                            "id": my_name,
-                            "message": f"/sync_save\n{file_content}"
-                        }
-                        await websocket.send(json.dumps(sync_payload))
-
-                    save = file_content
                 except Exception:
                     print(f"\r[Helper]Failed to load {file}.")
                     continue
@@ -199,3 +199,70 @@ def start():
         print("\r[System]Error was occurred")
 
 
+async def instant_generate(msg, my_name, room_name, websocket):
+    parts = msg.split()
+    if len(parts) == 5:
+        path = parts[1]
+        color = parts[2]
+        size = int(parts[3])
+        correction_factor = float(parts[4])
+        img = cv2.imread(path)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        height, width = gray.shape
+        # setsumei
+        mime_type, _ = mimetypes.guess_type(path)
+        if width >= size:
+            height = math.ceil(height * (size / width) * correction_factor)
+        else:
+            print(f"\r[System]error")
+
+        if color == "gray":
+            if mime_type and mime_type.startswith('image'):
+                resized_gray = cv2.resize(gray, (size, height))
+                pixels = resized_gray.flatten().astype(int)
+                result = properties.gray_generator(properties.ASCII_CHARS_NORMAL, pixels, size)
+                print(f"\r{result}")
+                await uploaded(result, f"ASCII art of {path}", room_name, my_name, websocket, msg)
+
+                # ws send message
+        elif color == "color":
+            if mime_type and mime_type.startswith('image'):
+                resized_rgb = cv2.resize(rgb, (size, height))
+                resized_gray = cv2.resize(gray, (size, height))
+                pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
+                pixels_gray = resized_gray.flatten().astype(int)
+                result = properties.rgb_generator(properties.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, "r", size)
+                print(f"\r{result}")
+                await uploaded(result, f"Color ASCII art of {path}", room_name, my_name, websocket, msg)
+                # ws send message
+    else:
+        print(f"\r[System]Error was occurred")
+
+
+async def uploaded(content, display_name, room_name, my_name, websocket, msg):
+    global save
+    list_msg = [msg,
+                "-----------------------------",
+                f"{my_name} uploaded {display_name}.",
+                f"To show {display_name}, type /show",
+                f"To download {display_name}, type /download",
+                "-----------------------------"]
+    for i in range(len(list_msg)):
+        payload = {
+            "to": room_name,
+            "id": my_name,
+            "message": list_msg[i]
+        }
+        if i != 0:
+            print(f"\r{my_name}: {list_msg[i]}")
+        await websocket.send(json.dumps(payload))
+        await asyncio.sleep(0.1)
+
+    sync_payload = {
+        "to": room_name,
+        "id": my_name,
+        "message": f"/opsyncsave\n{content}"
+    }
+    await websocket.send(json.dumps(sync_payload))
+    save = content
