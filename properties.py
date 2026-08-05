@@ -4,6 +4,7 @@ import cv2
 import time
 import os
 import numpy as np
+import mimetypes
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
 ASCII_CHARS_NORMAL = " .:-=+*#%@"
@@ -235,6 +236,7 @@ def command_list():
     print(f"\r/file <file> ... Send file (only text-based file)")
     print(f"\r/show ... Show latest text-based file's content")
     print(f"\r/download ... Download latest file")
+    print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... Generate ascii art instantly")
 
 
 def help():
