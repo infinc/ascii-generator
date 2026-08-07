@@ -20,7 +20,7 @@ match properties.user_choice():
             print("Generated completely")
 
     case 2:
-        path = properties.gain_path("jpeg jpeg png webp")
+        path = properties.gain_path("jpg jpeg png webp")
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and mime_type.startswith('image'):
             img = cv2.imread(path)
