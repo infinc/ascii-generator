@@ -245,8 +245,8 @@ async def uploaded(content, display_name, room_name, my_name, websocket, msg):
     list_msg = [msg,
                 "-----------------------------",
                 f"{my_name} uploaded {display_name}.",
-                f"To show {display_name}, type /show",
-                f"To download {display_name}, type /download",
+                f"To show it, type /show",
+                f"To download it, type /download",
                 "-----------------------------"]
     for i in range(len(list_msg)):
         payload = {
