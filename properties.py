@@ -9,9 +9,6 @@ import mimetypes
 ASCII_CHARS_BLOCK = " ░▒▓█"
 ASCII_CHARS_NORMAL = " .:-=+*#%@"
 ASCII_CHARS_IMPACT = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
-ASCII_CHARS_CYBER = "  .-+=<>!?0123456789$#@"
-ASCII_CHARS_JAPANESE = "  .、トニコキホマ国魔驚鬱"
-ASCII_CHARS_MINIMAL = "  .:+@"
 
 
 def user_choice():
@@ -43,13 +40,26 @@ def change_size_function(width, height):
         try:
             new_width = math.ceil(int(input("Type a new width: ")))
         except ValueError:
-            print("Error was occurred")
-            new_width = width
-        # ratio = math.ceil(width / height)
-        factor = float(input("Input a correction factor (normal=0.55): "))
+            print("Value Error was occurred.")
+            print("New width must be a number.")
+            print("Aborted")
+            sys.exit()
+        try:
+            factor = float(input("Input a correction factor (default=0.55): "))
+        except ValueError:
+            print("Value Error was occurred.")
+            print("Correction factor must be a number with a decimal point.")
+            print("Aborted")
+            sys.exit()
         new_height = math.ceil(height * (new_width / width) * factor)
     elif question == "n" or question == "N":
-        factor = float(input("Input a correction factor (normal=0.55): "))
+        try:
+            factor = float(input("Input a correction factor (default=0.55): "))
+        except ValueError:
+            print("Value Error was occurred.")
+            print("Correction factor must be a number with a decimal point.")
+            print("Aborted")
+            sys.exit()
         new_width = width
         new_height = math.ceil(height * (new_width / width) * factor)
     else:
@@ -137,9 +147,9 @@ def image_to_ascii_gray(gray, width, height):
         print(result)
         save_ascii_art(result)
     else:
-        print("You inputted wrong choice")
-        print("Aborted")
-        sys.exit()
+        print("You inputted wrong choice. Defaulting to 1.")
+        result = gray_generator(ASCII_CHARS_NORMAL, pixels, width)
+        print(result)
 
 
 def image_to_ascii_rgb(gray, rgb, width, height, ter):
@@ -187,7 +197,7 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 continue
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             resized_gray = cv2.resize(gray, (width, height))
             pixels = resized_gray.flatten().astype(int)
 
@@ -207,10 +217,14 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
 
 def ascii_to_image(path, chars):
     if not os.path.exists(path):
-        print(f"エラー: {path} が見つかりません。")
-        return
+        print(f"Error {path} does not exist.")
+        print("Aborted")
+        sys.exit()
     with open(path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+        lines = [line.rstrip('\n') for line in f.readlines()]
+
+    if not lines:
+        return
 
     new_height = len(lines)
     new_width = len(lines[0])
@@ -225,6 +239,9 @@ def ascii_to_image(path, chars):
             char = line[x]
             img_array[y, x] = char_to_gray.get(char, 0)
 
+    restored_height = int(new_height / 0.55)
+    img_array = cv2.resize(img_array, (new_width, restored_height), interpolation=cv2.INTER_LINEAR)
+
     cv2.imwrite("Generated-photos.png", img_array)
     print("Saved as Generated-photos.png")
     print("This photos ratio is (width:height)" + str(new_width) + ": " + str(new_height))
@@ -235,10 +252,11 @@ def command_list():
     print(f"\r/cmd ... Show all commands")
     print(f"\r/file <file> ... Send file (only text-based file)")
     print(f"\r/show ... Show latest text-based file's content")
-    print(f"\r/download ... Download latest file")
+    print(f"\r/download <[raw/png]> ... Save latest file as .txt(raw) or .png(png)")
     print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... Generate ascii art instantly")
 
 
-def help():
+def help_list():
     print(f"\r[Helper]To leave the chat, type exit")
     print(f"\r[Helper]To show all commands, type /cmd")
+    print(f"\r[Helper]Default factor is 0.55.")
