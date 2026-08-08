@@ -12,59 +12,58 @@ ASCII_CHARS_IMPACT = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdb
 
 
 def user_choice():
-    print("-------ASCII ART ASSISTANT---------")
-    print("1: Generate a monochrome ASCII ART")
-    print("2: Generate a color ASCII ART")
-    print("3: Play a gif file with ASCII ART")
-    print("4: Convert ASCII ART to png file")
-    print("5: Chat with other people by using achex")
-    choice = int(input("Your choice: "))
+    print("-------アスキーアート---------")
+    print("1: 画像から白黒のASCII ARTを生成します")
+    print("2: 画像からカラーのASCII ARTを生成します")
+    print("3: gif画像から白黒のASCII ARTに変換し再生します")
+    print("4: ASCII ARTをpng画像に変換します")
+    print("5: Achexを使用してチャットします")
+    choice = int(input("選択: "))
     return choice
 
 
 def gain_path(extension):
-    print("Ex) cat.jpeg")
-    print(f"This generator supports: {extension}")
-    print("If you want to use sample, type s and press enter")
-    path = input("Enter the path: ")
+    print("例) cat.jpeg")
+    print(f"対応している拡張子: {extension}")
+    print("サンプルを使用するには、sと入力してください")
+    path = input("パス(変換したい画像): ")
     if path == "s":
-        print("You selected sample")
+        print("サンプルを選択しました")
         path = "./cat.jpeg"
     return path
 
 
 def change_size_function(width, height):
-    question = input("Would you like to change a size?[y/n]: ")
+    question = input("サイズを変更しますか?[y/n]: ")
 
     if question == "y" or question == "Y":
         try:
-            new_width = math.ceil(int(input("Type a new width: ")))
+            new_width = math.ceil(int(input("横幅を入力: ")))
         except ValueError:
-            print("Value Error was occurred.")
-            print("New width must be a number.")
-            print("Aborted")
+            print("エラー: 数字を入力してください")
+            print("生成中止")
             sys.exit()
         try:
-            factor = float(input("Input a correction factor (default=0.55): "))
+            print("補正関数はfloat(小数点を含む数字)である必要があります")
+            factor = float(input("補正関数を入力してください(デフォルト=0.55): "))
         except ValueError:
-            print("Value Error was occurred.")
-            print("Correction factor must be a number with a decimal point.")
-            print("Aborted")
+            print("エラー: 小数点を含む数字を入力してください")
+            print("生成中止")
             sys.exit()
         new_height = math.ceil(height * (new_width / width) * factor)
     elif question == "n" or question == "N":
         try:
-            factor = float(input("Input a correction factor (default=0.55): "))
+            print("補正関数はfloat(小数点を含む数字)である必要があります")
+            factor = float(input("補正関数を入力してください(デフォルト=0.55): "))
         except ValueError:
-            print("Value Error was occurred.")
-            print("Correction factor must be a number with a decimal point.")
-            print("Aborted")
+            print("エラー: 小数点を含む数字を入力してください")
+            print("生成中止")
             sys.exit()
         new_width = width
         new_height = math.ceil(height * (new_width / width) * factor)
     else:
-        print("You inputted wrong choice")
-        print("Aborted")
+        print("エラー: y、又はnを選択してください")
+        print("生成中止")
         sys.exit()
 
     return new_width, new_height
@@ -107,9 +106,10 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter, width):
             colored_char = f"\033[38;5;{color_code}m{char}"
 
         else:
-            print("Error was occurred")
-            print("Aborted")
-            sys.exit()
+            print("エラー: t、又はrを入力してください。")
+            print("デフォルトでrを選択します")
+            color_code = rgb_to_256(r, g, b)
+            colored_char = f"\033[38;5;{color_code}m{char}"
 
         gen.append(colored_char)
         if (i + 1) % width == 0:
@@ -119,10 +119,11 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter, width):
 
 
 def save_ascii_art(result):
-    if input("You want to save ASCII ART as .txt?[y:n]: ") == "y":
+    if input(".txtとしてASCII ARTを保存しますか?[y:n]: ") == "y":
         with open("generated-art.txt", "w", encoding="utf-8") as f:
             f.write(result)
-            print("Saved as generated-art.txt")
+            print("generated-art.txtとして保存しました")
+            sys.exit()
     else:
         return
 
@@ -133,7 +134,7 @@ def image_to_ascii_gray(gray, width, height):
     pixels = resized_image.flatten().astype(int)
 
     ascii_chars_list()
-    choose = input("Choose characters: ")
+    choose = input("文字を選択: ")
     if choose == "1":
         result = gray_generator(ASCII_CHARS_NORMAL, pixels, width)
         print(result)
@@ -147,7 +148,8 @@ def image_to_ascii_gray(gray, width, height):
         print(result)
         save_ascii_art(result)
     else:
-        print("You inputted wrong choice. Defaulting to 1.")
+        print("エラー: 1、2、又は3を選択してください")
+        print("デフォルトで1を選択します")
         result = gray_generator(ASCII_CHARS_NORMAL, pixels, width)
         print(result)
 
@@ -160,7 +162,7 @@ def image_to_ascii_rgb(gray, rgb, width, height, ter):
     pixels_gray = resized_gray.flatten().astype(int)
 
     ascii_chars_list()
-    choose = input("Choose characters: ")
+    choose = input("文字を選択: ")
     if choose == "1":
         print(rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width))
     elif choose == "2":
