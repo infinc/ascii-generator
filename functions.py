@@ -18,9 +18,13 @@ def user_choice():
     print("3: gif画像から白黒のASCII ARTに変換し再生します")
     print("4: ASCII ARTをpng画像に変換します")
     print("5: Achexを使用してチャットします")
-    choice = int(input("選択: "))
-    return choice
-
+    try:
+        choice = int(input("選択: "))
+        return choice
+    except ValueError:
+        print("エラー: 数字を入力してください")
+        print("中止")
+        sys.exit()
 
 def gain_path(extension, sample):
     print("例) cat.jpeg")
