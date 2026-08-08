@@ -7,7 +7,7 @@ from fanctions import sys
 
 match fanctions.user_choice():
     case 1:
-        path = fanctions.gain_path("jpg jpeg png webp", "sample.jpg")
+        path = fanctions.gain_path(".jpg .jpeg .png .webp", "sample.jpg")
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and mime_type.startswith('image'):
             img = cv2.imread(path)
@@ -23,7 +23,7 @@ match fanctions.user_choice():
             sys.exit()
 
     case 2:
-        path = fanctions.gain_path("jpg jpeg png webp", "sample.jpg")
+        path = fanctions.gain_path(".jpg .jpeg .png .webp", "sample.jpg")
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and mime_type.startswith('image'):
             img = cv2.imread(path)
@@ -40,7 +40,7 @@ match fanctions.user_choice():
             sys.exit()
 
     case 3:
-        path = fanctions.gain_path("gif", "")
+        path = fanctions.gain_path(".gif", "")
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and (mime_type.startswith('video') or 'gif' in mime_type):
             cap = cv2.VideoCapture(path)
@@ -69,7 +69,7 @@ match fanctions.user_choice():
             sys.exit()
 
     case 4:
-        path = fanctions.gain_path("txt", "sample.txt")
+        path = fanctions.gain_path(".txt", "sample.txt")
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type == 'text/plain':
             fanctions.ascii_chars_list()
@@ -92,7 +92,7 @@ match fanctions.user_choice():
             sys.exit()
 
     case 5:
-        chat.start()
+        chat_factor.start()
 
     case _:
         print("エラー: 1、2、3、4、又は5を選んでください")
