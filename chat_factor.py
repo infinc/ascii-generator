@@ -4,15 +4,15 @@ import ssl
 import sys
 import traceback
 import websockets
-import properties
+import fanctions
 import secrets
 import string
 import re
 import hashlib
-from properties import os
-from properties import mimetypes
-from properties import cv2
-from properties import math
+from fanctions import os
+from fanctions import mimetypes
+from fanctions import cv2
+from fanctions import math
 
 save = None
 
@@ -24,7 +24,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
             data = json.loads(message)
 
             if data.get("auth") == "OK":
-                print("\r[System]Server authentication successful")
+                print("\r[System]認証が成功しました")
                 continue
             msg = data.get("message")
             if msg:
@@ -45,7 +45,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                 elif msg.startswith("/opfounduser "):
                     requester = msg.split(" ", 1)[1].strip()
                     if full_id == requester:
-                        print(f"\r[System]{sender} is currently online.")
+                        print(f"\r[System]{sender} は現在オンラインです")
                         print(f"{full_id}: ", end="", flush=True)
                     continue
                 elif msg.startswith("/opsyncsave\n"):
@@ -57,7 +57,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                     if target_user in (my_name, absolute_id, full_id):
                         content = parts[1] if len(parts) > 1 else ""
                         save = content
-                        print(f"\r[{sender} (latest file)]:\n{content}")
+                        print(f"\r[{sender} (最新のファイル)]:\n{content}")
                         print(f"{full_id}: ", end="", flush=True)
 
                     continue
@@ -72,7 +72,9 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                     }
                     await websocket.send(json.dumps(payload))
     except websockets.exceptions.ConnectionClosed:
-        print("\r[System]Connection defused")
+        print("\r[System]接続が切れました")
+        print("\r[System]続けるには再接続してください")
+        sys.exit()
 
 
 async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
@@ -84,21 +86,21 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
         if not msg.strip():
             continue
 
-        if msg.lower() in ['exit', 'quit']:
-            print(f"\r[System]Disconnected")
+        if msg.startswith("/exit"):
+            print(f"\r[System]退出しました")
             payload = {
                 "to": room_name,
                 "id": full_id,
-                "message": f"[System]{full_id} left the chat."
+                "message": f"[System]{full_id} が退出しました"
             }
             await websocket.send(json.dumps(payload))
             break
 
         elif msg.startswith("/help"):
-            properties.help_list()
+            fanctions.help_list()
 
         elif msg.startswith("/cmd"):
-            properties.command_list()
+            fanctions.command_list()
 
         elif msg.startswith("/generate "):
             await instant_generate(msg, my_name, full_id, room_name, websocket)
@@ -118,9 +120,9 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                             with open(filename, "w", encoding="utf-8") as f:
                                 clean_save = re.sub(r'\x1b\[[0-9;]*m', '', save)
                                 f.write(clean_save)
-                            print(f"\r[Helper]Successfully saved as '{filename}'.")
+                            print(f"\r[Helper]{filename} として保存しました")
                         except Exception as e:
-                            print(f"\r[Helper]Failed to save the file: {e}")
+                            print(f"\r[Helper]エラー: {e}")
 
                     elif mode == "png":
                         filename = cmd_parts[2] if len(cmd_parts) > 2 else "downloaded.png"
@@ -132,30 +134,29 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                         try:
                             temp_txt = "temp_download_ascii.txt"
                             with open(temp_txt, "w", encoding="utf-8") as f:
-                                clean_save = re.sub(r'\x1b\[[0-9;]*m', '', save)
-                                f.write(clean_save)
+                                f.write(save)
 
-                            properties.ascii_to_image(temp_txt, properties.ASCII_CHARS_NORMAL)
+                            fanctions.ascii_to_image(temp_txt, fanctions.ASCII_CHARS_NORMAL)
 
                             if os.path.exists("Generated-photos.png"):
                                 if os.path.exists(filename):
                                     os.remove(filename)
                                 os.rename("Generated-photos.png", filename)
-                                print(f"\r[Helper]Successfully saved as '{filename}'.")
+                                print(f"\r[Helper]{filename} として保存しました")
                             else:
-                                print(f"\r[Helper]Failed to generate image.")
+                                print(f"\r[Helper]エラー: test")
 
                             if os.path.exists(temp_txt):
                                 os.remove(temp_txt)
 
                         except Exception as e:
-                            print(f"\r[Helper]Failed to save the image: {e}")
+                            print(f"\r[Helper]エラー: {e}")
                     else:
-                        print(f"\r[System] Usage: /download <raw/png> [filename]")
+                        print(f"\r[System]コマンド: /download <[raw/png]> <filename>")
                 else:
-                    print(f"\r[System] Usage: /download <raw/png> [filename]")
+                    print(f"\r[System]コマンド: /download <[raw/png]> <filename>")
             else:
-                print(f"\r[Helper]No history found to download.")
+                print(f"\r[Helper]エラー: ダウンロードするファイルが存在しません")
             continue
 
         elif msg.startswith("/file "):
@@ -168,24 +169,24 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     await uploaded(file_content, file, room_name, full_id, websocket, msg)
 
                 except Exception as e:
-                    print(f"\r[Helper]Failed to load {file}. Error: {e}")
+                    print(f"\r[Helper]エラー: {e}")
                     continue
             else:
-                print(f"\r[Helper]{file} doesn't exist.")
+                print(f"\r[Helper]エラー: {file} が存在しません。")
 
         elif msg.startswith("/user "):
             target_user = msg[6:].strip()
             if not target_user:
-                print(f"\r[System] Usage: /user <user_name_or_id>")
+                print(f"\r[System]コマンド: /user <user_nameid>")
                 print(f"{full_id}: ", end="", flush=True)
                 continue
 
             if target_user in (my_name, absolute_id, full_id):
-                print(f"\r[System] That's you! You are online.")
+                print(f"\r[System]指定した人は自分自身です。")
                 print(f"{full_id}: ", end="", flush=True)
                 continue
 
-            print(f"\r[System] Checking if '{target_user}' is online...")
+            print(f"\r[System]{target_user} を検索しています...")
 
             payload = {
                 "to": room_name,
@@ -210,7 +211,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     await websocket.send(json.dumps(payload))
 
                 except Exception:
-                    print(f"\r[Helper]No history found.")
+                    print(f"\r[Helper]エラー: ダウンロードするファイルが存在しません")
         else:
             payload = {
                 "to": room_name,
@@ -221,10 +222,11 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
 
 
 async def main():
-    print("This chat's anonymity is low.")
-    my_name = input("Enter your name: ")
-    room_name = input("Enter the ID of the room you want to join: ")
-    room_password = input("Enter the password of the room you want to join: ")
+    print("匿名性は低いです。パスワードや個人情報を送らないでください。")
+    my_name = input("使用するユーザーネームを入力: ")
+    room_name = input("参加する部屋のIDを入力: ")
+    print("パスワードは入力しなくてもデフォルトでpasswordになります。")
+    room_password = input("参加する部屋のパスワードを入力: ")
     if not room_password:
         room_password = "password"
 
@@ -264,29 +266,30 @@ async def main():
 
                     if "auth" in res_data:
                         if res_data["auth"] == "OK":
-                            print("\r[System]Server authentication successful")
+                            print("\r[System]認証が成功しました")
                             break
                         else:
-                            print(f"\r[System]Authentication failed.")
-                            return
+                            print(f"\r[System]エラー: 認証に失敗しました。")
+                            print(f"\r中止")
+                            sys.exit()
                     elif "ERR" in res_data or "error" in res_data:
                         err_msg = res_data.get("ERR", res_data.get("error", "Unknown error"))
-                        print(f"\r[System]Authentication failed: {err_msg}")
-                        return
+                        print(f"\r[System]エラー: 認証に失敗しました。{err_msg}")
+                        print(f"\r中止")
             except asyncio.TimeoutError:
                 pass
 
             absolute_id = generate_absolute_id()
             full_id = f"[{absolute_id}]{my_name}"
-            await websocket.send(json.dumps({"to": real_room_id, "id": "[System]", "message": f"{full_id} joined"}))
+            await websocket.send(json.dumps({"to": real_room_id, "id": "[System]", "message": f"{full_id} が参加しました"}))
             print(f"\r-----------------------------")
-            print(f"\rYour name: {my_name}")
-            print(f"\rYour absolute ID: {absolute_id}")
-            print(f"\rRoom ID: {room_name}")
-            print(f"\rRoom password: {room_password}")
+            print(f"\rあなたのユーザーネーム: {my_name}")
+            print(f"\rあなたのID: {absolute_id}")
+            print(f"\r部屋のID: {room_name}")
+            print(f"\r部屋のパスワード: {room_password}")
             print(f"\r-----------------------------")
-            print(f"\r[System]Connected. To leave the chat, type exit")
-            print(f"\r[System]To show all commands. type /cmd")
+            print(f"\r[System]接続しました。退出するには/exitと入力してください")
+            print(f"\r[System]全てのコマンドを出力するには、/cmdと入力してください")
 
             receive_task = asyncio.create_task(receive_messages(websocket, my_name, full_id, real_room_id, absolute_id))
             send_task = asyncio.create_task(send_messages(websocket, my_name, full_id, real_room_id, absolute_id))
@@ -295,8 +298,9 @@ async def main():
             receive_task.cancel()
 
     except Exception as e:
-        print(f"\r[System]Error was occurred: {e}")
-        traceback.print_exc()
+        print(f"\r[System]エラー: {e}")
+        print(f"\r中止")
+        sys.exit()
 
 
 def start():
@@ -306,7 +310,8 @@ def start():
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\r[System]Error: KeyboardInterrupt")
+        print("\r[System]エラー: ユーザーの操作によって終了しました。")
+        print(f"\r中止")
         sys.exit()
 
 
@@ -320,7 +325,7 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
             correction_factor = float(parts[4])
 
             if not os.path.exists(path):
-                print(f"\r[System]Error: {path} does not exist.")
+                print(f"\r[System]エラー: {path} は存在しません。")
                 return
 
             img = cv2.imread(path)
@@ -332,16 +337,16 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
             if width >= size:
                 height = math.ceil(height * (size / width) * correction_factor)
             else:
-                print(f"\r[System]Error: Image width is smaller than requested size.")
+                print(f"\r[System]エラー: 画像のサイズよりも大きい値を入力することはできません。")
                 return
 
             if color == "gray":
                 if mime_type and mime_type.startswith('image'):
                     resized_gray = cv2.resize(gray, (size, height))
                     pixels = resized_gray.flatten().astype(int)
-                    result = properties.gray_generator(properties.ASCII_CHARS_NORMAL, pixels, size)
+                    result = fanctions.gray_generator(fanctions.ASCII_CHARS_NORMAL, pixels, size)
                     print(f"\r{result}")
-                    await uploaded(result, f"ASCII art of {path}", room_name, full_id, websocket, msg)
+                    await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
 
             elif color == "color":
                 if mime_type and mime_type.startswith('image'):
@@ -349,22 +354,22 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                     resized_gray = cv2.resize(gray, (size, height))
                     pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
                     pixels_gray = resized_gray.flatten().astype(int)
-                    result = properties.rgb_generator(properties.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, "r", size)
+                    result = fanctions.rgb_generator(fanctions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, "r", size)
                     print(f"\r{result}")
-                    await uploaded(result, f"Color ASCII art of {path}", room_name, full_id, websocket, msg)
+                    await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
         else:
-            print(f"\r[System]Usage: /generate <path> <gray/color> <width> <factor>")
+            print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> <factor>")
     except Exception as e:
-        print(f"\r[System]Generate error: {e}")
+        print(f"\r[System]エラー: {e}")
 
 
 async def uploaded(content, display_name, room_name, full_id, websocket, msg):
     global save
     list_msg = [msg,
                 "-----------------------------",
-                f"{full_id} uploaded {display_name}.",
-                f"To show it, type /show",
-                f"To download it, type /download <[raw/png]>",
+                f"{full_id} が{display_name} をアップロードしました。",
+                f"表示するには/showと入力してください。",
+                f"ダウンロードするには、/download <[raw/png]>と入力してください。",
                 "-----------------------------"]
     for i in range(len(list_msg)):
         payload = {

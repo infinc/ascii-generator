@@ -22,14 +22,18 @@ def user_choice():
     return choice
 
 
-def gain_path(extension):
+def gain_path(extension, sample):
     print("例) cat.jpeg")
     print(f"対応している拡張子: {extension}")
-    print("サンプルを使用するには、sと入力してください")
+    if sample != "":
+        print("サンプルを使用するには、sと入力してください")
     path = input("パス(変換したい画像): ")
     if path == "s":
+        if sample == "":
+            print("エラー: サンプルはありません。")
+            sys.exit()
         print("サンプルを選択しました")
-        path = "./cat.jpeg"
+        path = "./" + sample
     return path
 
 
@@ -164,19 +168,28 @@ def image_to_ascii_rgb(gray, rgb, width, height, ter):
     ascii_chars_list()
     choose = input("文字を選択: ")
     if choose == "1":
-        print(rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width))
+        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width)
+        print(result)
+        save_ascii_art(result)
     elif choose == "2":
-        print(rgb_generator(ASCII_CHARS_BLOCK, pixels_rgb, pixels_gray, ter, width))
+        result = rgb_generator(ASCII_CHARS_BLOCK, pixels_rgb, pixels_gray, ter, width)
+        print(result)
+        save_ascii_art(result)
     elif choose == "3":
-        print(rgb_generator(ASCII_CHARS_IMPACT, pixels_rgb, pixels_gray, ter, width))
+        result = rgb_generator(ASCII_CHARS_IMPACT, pixels_rgb, pixels_gray, ter, width)
+        print(result)
+        save_ascii_art(result)
     else:
-        print("You inputted wrong choice. Defaulting to 1.")
-        print(rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width))
+        print("エラー: 1、2、又は3を選択してください")
+        print("デフォルトで1を選択します")
+        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width)
+        print(result)
+        save_ascii_art(result)
 
 
 def gif_to_ascii_gray(width, height, cap, sleep_time):
     ascii_chars_list()
-    choose = input("Choose characters: ")
+    choose = input("文字を選択: ")
     if choose == "1":
         selected_chars = ASCII_CHARS_NORMAL
     elif choose == "2":
@@ -184,10 +197,11 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
     elif choose == "3":
         selected_chars = ASCII_CHARS_IMPACT
     else:
-        print("You inputted wrong choice. Defaulting to 1.")
+        print("エラー: 1、2、又は3を選択してください")
+        print("デフォルトで1を選択します")
         selected_chars = ASCII_CHARS_NORMAL
 
-    print("\n--- Starting Video in 3 seconds... Press Ctrl+C to stop ---")
+    print("\n--- 3秒後に開始します。Ctrl + Cで中止します ---")
     time.sleep(3)
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -218,47 +232,91 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
 
 
 def ascii_to_image(path, chars):
+    import re
     if not os.path.exists(path):
-        print(f"Error {path} does not exist.")
-        print("Aborted")
+        print(f"エラー: {path} は存在しません。")
+        print("生成中止")
         sys.exit()
+
     with open(path, 'r', encoding='utf-8') as f:
         lines = [line.rstrip('\n') for line in f.readlines()]
 
     if not lines:
         return
 
+    def clean_text(text):
+        return re.sub(r'\x1b\[[0-9;]*m', '', text)
+
     new_height = len(lines)
-    new_width = len(lines[0])
+    new_width = max((len(clean_text(line)) for line in lines), default=0)
+
+    if new_width == 0:
+        return
+
     num_chars = len(chars)
     char_to_gray = {
         char: int((i / (num_chars - 1)) * 255) for i, char in enumerate(chars)
     }
-    img_array = np.zeros((new_height, new_width), dtype=np.uint8)
-    for y, line in enumerate(lines):
-        current_width = min(len(line), new_width)
-        for x in range(current_width):
-            char = line[x]
-            img_array[y, x] = char_to_gray.get(char, 0)
+    img_array = np.zeros((new_height, new_width, 3), dtype=np.uint8)
 
+    for y, line in enumerate(lines):
+        parts = re.split(r'(\x1b\[[0-9;]*m)', line)
+        current_color = None
+        x = 0
+
+        for part in parts:
+            if not part:
+                continue
+
+            if part.startswith('\x1b['):
+                m = re.match(r'\x1b\[([0-9;]+)m', part)
+                if m:
+                    codes = m.group(1).split(';')
+                    if len(codes) >= 3 and codes[0] == '38':
+                        if codes[1] == '5' and len(codes) == 3:
+                            code = int(codes[2])
+                            if code >= 16:
+                                code -= 16
+                                r = int(((code // 36) / 5) * 255)
+                                g = int((((code % 36) // 6) / 5) * 255)
+                                b = int(((code % 6) / 5) * 255)
+                                current_color = (b, g, r)
+                        elif codes[1] == '2' and len(codes) == 5:
+                            r, g, b = int(codes[2]), int(codes[3]), int(codes[4])
+                            current_color = (b, g, r)
+                    elif codes[0] == '0':
+                        current_color = None
+            else:
+                for char in part:
+                    if x < new_width:
+                        gray_val = char_to_gray.get(char, 0)
+                        if current_color is None:
+                            img_array[y, x] = (gray_val, gray_val, gray_val)
+                        else:
+                            if char == ' ' or gray_val == 0:
+                                img_array[y, x] = (0, 0, 0)
+                            else:
+                                img_array[y, x] = current_color
+                        x += 1
     restored_height = int(new_height / 0.55)
     img_array = cv2.resize(img_array, (new_width, restored_height), interpolation=cv2.INTER_LINEAR)
 
     cv2.imwrite("Generated-photos.png", img_array)
-    print("Saved as Generated-photos.png")
-    print("This photos ratio is (width:height)" + str(new_width) + ": " + str(new_height))
+    print("Generated-photos.png として保存しました")
+    print("この画像の比率は(横:縦)" + str(new_width) + ": " + str(restored_height))
 
 
 def command_list():
-    print(f"\r[Helper]Command list")
-    print(f"\r/cmd ... Show all commands")
-    print(f"\r/file <file> ... Send file (only text-based file)")
-    print(f"\r/show ... Show latest text-based file's content")
-    print(f"\r/download <[raw/png]> ... Save latest file as .txt(raw) or .png(png)")
-    print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... Generate ascii art instantly")
+    print(f"\r[Helper]コマンドリスト")
+    print(f"\r/cmd ... 全てのコマンドを表示します")
+    print(f"\r/help ... ヘルプを表示します")
+    print(f"\r/file <file> ... ファイルを送信します(テキストベースのファイルのみ)")
+    print(f"\r/show ... 最新のファイルの中身を表示します")
+    print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
+    print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... すぐにASCII ARTを生成します")
 
 
 def help_list():
-    print(f"\r[Helper]To leave the chat, type exit")
-    print(f"\r[Helper]To show all commands, type /cmd")
-    print(f"\r[Helper]Default factor is 0.55.")
+    print(f"\r[Helper]退出するには/exitと入力してください")
+    print(f"\r[Helper]全てのコマンドを出力するには、/cmdと入力してください")
+    print(f"\r[Helper]デフォルトの補正関数は0.55です。")
