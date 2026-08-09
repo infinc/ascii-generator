@@ -1,7 +1,7 @@
 import chat_functions
 import functions
 from functions import cv2
-from functions import mimetypes
+import mimetypes
 from functions import sys
 
 
@@ -11,8 +11,11 @@ match functions.user_choice():
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and mime_type.startswith('image'):
             img = cv2.imread(path)
+            if img is None:
+                print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
+                print("生成中止")
+                sys.exit()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             height, width = gray.shape
             print("この画像の比率は(横:縦)" + str(width) + ":" + str(height))
             width, height = functions.change_size_function(width, height)
@@ -20,6 +23,7 @@ match functions.user_choice():
             print("生成成功")
         else:
             print("エラー: 未対応のファイル、または拡張子の可能性があります。")
+            print("生成中止")
             sys.exit()
 
     case 2:
@@ -27,16 +31,20 @@ match functions.user_choice():
         mime_type, _ = mimetypes.guess_type(path)
         if mime_type and mime_type.startswith('image'):
             img = cv2.imread(path)
+            if img is None:
+                print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
+                print("生成中止")
+                sys.exit()
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             height, width = gray.shape
             print("この画像の比率は(横:縦)" + str(width) + ":" + str(height))
             width, height = functions.change_size_function(width, height)
-            terminal = input("True Color(iTerm2,Pycharm,等)もしくは(Terminal,等)どちらを使いますか?(デフォルト=r)[t/r]: ")
-            functions.image_to_ascii_rgb(gray, rgb, width, height, terminal)
+            functions.image_to_ascii_rgb(gray, rgb, width, height)
             print("生成成功")
         else:
             print("エラー: 未対応のファイル、または拡張子の可能性があります。")
+            print("生成中止")
             sys.exit()
 
     case 3:
@@ -57,6 +65,10 @@ match functions.user_choice():
             width, height = functions.change_size_function(width, height)
             try:
                 skip_frames = int(input("何フレームスキップしますか?(normal=1 or 2): "))
+                if skip_frames < 0:
+                    print("エラー: 負の値は入力できません。")
+                    print("生成中止")
+                    sys.exit()
             except ValueError:
                 print("エラー: 数字を入力してください")
                 print("生成中止")

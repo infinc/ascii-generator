@@ -347,6 +347,8 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                     result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
                     print(f"\r{result}")
                     await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
+                else:
+                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
 
             elif color == "color":
                 if mime_type and mime_type.startswith('image'):
@@ -354,9 +356,14 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                     resized_gray = cv2.resize(gray, (size, height))
                     pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
                     pixels_gray = resized_gray.flatten().astype(int)
-                    result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, "r", size)
+                    result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
                     print(f"\r{result}")
                     await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
+                else:
+                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+            else:
+                print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
+
         else:
             print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> <factor>")
     except Exception as e:
