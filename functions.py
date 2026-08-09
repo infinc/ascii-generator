@@ -4,7 +4,6 @@ import cv2
 import time
 import os
 import numpy as np
-import mimetypes
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
 ASCII_CHARS_NORMAL = " .:-=+*#%@"
@@ -98,7 +97,7 @@ def gray_generator(chars, pixels, width):
     return ascii_image
 
 
-def rgb_generator(chars, pixels_rgb, pixels_gray, ter, width):
+def rgb_generator(chars, pixels_rgb, pixels_gray, width):
     num_chars = len(chars)
     gen = []
 
@@ -106,18 +105,9 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter, width):
         brightness = pixels_gray[i]
         char = chars[brightness * num_chars // 256]
         r, g, b = pixels_rgb[i]
-        if ter == "t":
-            colored_char = f"\033[38;2;{r};{g};{b}m{char}"
 
-        elif ter == "r":
-            color_code = rgb_to_256(r, g, b)
-            colored_char = f"\033[38;5;{color_code}m{char}"
-
-        else:
-            print("エラー: t、又はrを入力してください。")
-            print("デフォルトでrを選択します")
-            color_code = rgb_to_256(r, g, b)
-            colored_char = f"\033[38;5;{color_code}m{char}"
+        color_code = rgb_to_256(r, g, b)
+        colored_char = f"\033[38;5;{color_code}m{char}"
 
         gen.append(colored_char)
         if (i + 1) % width == 0:
@@ -127,7 +117,8 @@ def rgb_generator(chars, pixels_rgb, pixels_gray, ter, width):
 
 
 def save_ascii_art(result):
-    if input(".txtとしてASCII ARTを保存しますか?[y:n]: ") == "y":
+    opinion = input(".txtとしてASCII ARTを保存しますか?[y:n]: ")
+    if opinion == "y" or opinion == "Y":
         with open("generated-art.txt", "w", encoding="utf-8") as f:
             f.write(result)
             print("generated-art.txtとして保存しました")
@@ -160,9 +151,10 @@ def image_to_ascii_gray(gray, width, height):
         print("デフォルトで1を選択します")
         result = gray_generator(ASCII_CHARS_NORMAL, pixels, width)
         print(result)
+        save_ascii_art(result)
 
 
-def image_to_ascii_rgb(gray, rgb, width, height, ter):
+def image_to_ascii_rgb(gray, rgb, width, height):
     resized_rgb = cv2.resize(rgb, (width, height))
     resized_gray = cv2.resize(gray, (width, height))
 
@@ -172,21 +164,21 @@ def image_to_ascii_rgb(gray, rgb, width, height, ter):
     ascii_chars_list()
     choose = input("文字を選択: ")
     if choose == "1":
-        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width)
+        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, width)
         print(result)
         save_ascii_art(result)
     elif choose == "2":
-        result = rgb_generator(ASCII_CHARS_BLOCK, pixels_rgb, pixels_gray, ter, width)
+        result = rgb_generator(ASCII_CHARS_BLOCK, pixels_rgb, pixels_gray, width)
         print(result)
         save_ascii_art(result)
     elif choose == "3":
-        result = rgb_generator(ASCII_CHARS_IMPACT, pixels_rgb, pixels_gray, ter, width)
+        result = rgb_generator(ASCII_CHARS_IMPACT, pixels_rgb, pixels_gray, width)
         print(result)
         save_ascii_art(result)
     else:
         print("エラー: 1、2、又は3を選択してください")
         print("デフォルトで1を選択します")
-        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, ter, width)
+        result = rgb_generator(ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, width)
         print(result)
         save_ascii_art(result)
 
