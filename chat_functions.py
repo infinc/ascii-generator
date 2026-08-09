@@ -4,15 +4,15 @@ import ssl
 import sys
 import traceback
 import websockets
-import fanctions
+import functions
 import secrets
 import string
 import re
 import hashlib
-from fanctions import os
-from fanctions import mimetypes
-from fanctions import cv2
-from fanctions import math
+from functions import os
+from functions import mimetypes
+from functions import cv2
+from functions import math
 
 save = None
 
@@ -97,10 +97,10 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
             break
 
         elif msg.startswith("/help"):
-            fanctions.help_list()
+            functions.help_list()
 
         elif msg.startswith("/cmd"):
-            fanctions.command_list()
+            functions.command_list()
 
         elif msg.startswith("/generate "):
             await instant_generate(msg, my_name, full_id, room_name, websocket)
@@ -136,7 +136,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                             with open(temp_txt, "w", encoding="utf-8") as f:
                                 f.write(save)
 
-                            fanctions.ascii_to_image(temp_txt, fanctions.ASCII_CHARS_NORMAL)
+                            functions.ascii_to_image(temp_txt, functions.ASCII_CHARS_NORMAL)
 
                             if os.path.exists("Generated-photos.png"):
                                 if os.path.exists(filename):
@@ -344,9 +344,11 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                 if mime_type and mime_type.startswith('image'):
                     resized_gray = cv2.resize(gray, (size, height))
                     pixels = resized_gray.flatten().astype(int)
-                    result = fanctions.gray_generator(fanctions.ASCII_CHARS_NORMAL, pixels, size)
+                    result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
                     print(f"\r{result}")
                     await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
+                else:
+                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
 
             elif color == "color":
                 if mime_type and mime_type.startswith('image'):
@@ -354,9 +356,14 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                     resized_gray = cv2.resize(gray, (size, height))
                     pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
                     pixels_gray = resized_gray.flatten().astype(int)
-                    result = fanctions.rgb_generator(fanctions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, "r", size)
+                    result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
                     print(f"\r{result}")
                     await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
+                else:
+                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+            else:
+                print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
+
         else:
             print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> <factor>")
     except Exception as e:
