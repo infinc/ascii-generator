@@ -9,10 +9,10 @@ import secrets
 import string
 import re
 import hashlib
-from functions import os
-from functions import mimetypes
-from functions import cv2
-from functions import math
+import os
+import mimetypes
+import cv2
+import math
 
 save = None
 

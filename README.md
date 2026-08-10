@@ -17,8 +17,6 @@
 
 <img width="100" height="134" alt="Image" src="https://github.com/user-attachments/assets/c9cedeb7-227e-4fba-9ead-95a638362cbb" />
 
-
-
 ---
 
 ## 利用方法
@@ -33,7 +31,7 @@ python -m venv venv
 3. 仮想環境をactivateします。
 ```bash
 source venv/bin/activate #Mac, Linux
-venv\Scripts\activate.bat #Cmd.exe
+venv\Scripts\activate.bat #cmd.exe
 ```
 4. requirements.txtを使用して必要なパッケージをインストールします。
 ```bash
@@ -42,6 +40,13 @@ pip install -r requirements.txt
 5. main.pyを起動します。
 ```bash
 python main.py
+```
+
+<img width="436" height="240" alt="Image" src="https://github.com/user-attachments/assets/dfb5410f-0478-414e-9d18-e217455028aa" />
+
+(追記) venv仮想環境を終了するにはdeactivateをします。
+```bash
+deactivate
 ```
 
 ---
@@ -70,6 +75,32 @@ python main.py
   - 最初に参加する人はルーム名とパスワードは何でもよいですが、ほかの人がその部屋に参加したい場合ルーム名とパスワードは同じ値を入力してください。
   - チャット中に `/generate` コマンドで即座にアスキーアートを生成・共有したり、`/file` コマンドでテキストファイルを送信、`/download` で相手の共有したファイルを保存できます。
   - 利用可能なコマンド一覧はチャット内で `/cmd` と入力すると確認できます。
+
+---
+
+## コマンドライン引数を用いた生成
+このプログラムはコマンドライン引数による生成に対応しています。ただし、`python main.py`だけでも従来通りの対話型の生成も使用可能です。
+
+このコマンドライン引数を用いた生成は、白黒又はカラーのASCII ARTの生成のみ対応しています。画像への変換やGIFの再生、Websocketでのチャットは`python main.py`から行ってください。
+```bash
+python main.py [-h] (--color | --gray) [--factor FACTOR] [--width WIDTH] [--save] path
+```
+
+**【必須な値】**
+
+path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス<br>
+
+**【どちらかが必要な値】**
+
+--color&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;カラーASCII ARTを生成<br>
+--gray&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;白黒ASCII ARTを生成<br>
+
+**【オプションの値】**
+
+  -h, --help&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ヘルプを表示します<br>
+  --factor FACTOR&nbsp;&nbsp;&nbsp;&nbsp;補正係数(デフォルト=0.55、指定なし=0.55)<br>
+  --width WIDTH&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;出力の横幅(指定なし=画像の横幅)<br>
+  --save&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;生成したASCII ARTをgenerated-art.txtとして保存(指定なし=保存しない)
 
 ---
 
