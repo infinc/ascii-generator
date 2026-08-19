@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "web-worker",
+      "runtimeExecutable": "web/node_modules/.bin/wrangler",
+      "runtimeArgs": ["dev", "--config", "web/wrangler.jsonc", "--port", "8788"],
+      "port": 8788
+    },
+    {
       "name": "web-static",
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8787", "--directory", "web/public"],
