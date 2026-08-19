@@ -1,0 +1,14 @@
+{
+  "name": "ascii-art-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "chat_functions.py の Achex チャットを Cloudflare Workers 上の Web サイトにしたもの",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
