@@ -10,3 +10,8 @@ image.png
 /__pycache__
 /.idea
 /.DS_Store
+
+# Web版 (Cloudflare Workers)
+/web/node_modules
+/web/.wrangler
+/web/package-lock.json
