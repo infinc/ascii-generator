@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASCII ART Chat</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>%23</text></svg>">
+</head>
+<body>
+
+<section id="join-screen">
+  <div class="panel">
+    <h1>ASCII ART Chat</h1>
+    <p class="lead">Achex を使ったチャットです。<code>python main.py</code> のメニュー5 と同じ部屋に参加できます。</p>
+
+    <p class="warn">
+      匿名性は低いです。パスワードや個人情報を送らないでください。<br>
+      パスワード付きのルームであっても、第三者に傍受されるリスクやサーバー側にデータが経由する可能性があります。
+    </p>
+
+    <form id="join-form">
+      <label for="join-name">使用するユーザーネーム</label>
+      <input id="join-name" type="text" autocomplete="off" required>
+
+      <label for="join-room">参加する部屋のID</label>
+      <input id="join-room" type="text" autocomplete="off" required>
+
+      <label for="join-pass">参加する部屋のパスワード</label>
+      <input id="join-pass" type="text" autocomplete="off" placeholder="未入力の場合は password">
+
+      <p id="join-error" class="join-error" hidden></p>
+      <button id="join-button" type="submit">参加する</button>
+    </form>
+
+    <p class="note">
+      最初に参加する人は部屋IDとパスワードは何でも構いません。同じ部屋に入るには、全員が同じ値を入力してください。
+    </p>
+  </div>
+</section>
+
+<section id="chat-screen" hidden>
+  <header id="status-bar">
+    <span id="status-room"></span>
+    <span id="status-id"></span>
+    <span id="status-route"></span>
+    <button id="reconnect-button" type="button" hidden>再接続</button>
+  </header>
+
+  <div id="log" role="log" aria-live="polite"></div>
+
+  <div id="staged" hidden>
+    <span class="staged-label">選択中のファイル:</span>
+    <span id="staged-name"></span>
+    <button id="staged-clear" type="button" title="選択を解除">×</button>
+  </div>
+
+  <p id="busy" hidden></p>
+
+  <div id="input-row">
+    <input id="msg-input" type="text" autocomplete="off" placeholder="メッセージ、または /cmd でコマンド一覧">
+    <button id="send-button" type="button">送信</button>
+  </div>
+</section>
+
+<div id="drop-overlay" hidden><span>ここにドロップしてファイルを選択</span></div>
+<input id="file-picker" type="file" hidden>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
