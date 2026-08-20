@@ -204,7 +204,20 @@ function setupInput() {
     };
 
     ui.dom["send-button"].addEventListener("click", submit);
+
+    // IME (日本語入力など) の変換中かどうか。変換確定の Enter を送信と誤認しないために使う
+    let composing = false;
+    input.addEventListener("compositionstart", () => {
+        composing = true;
+    });
+    input.addEventListener("compositionend", () => {
+        composing = false;
+    });
+
     input.addEventListener("keydown", (e) => {
+        // 変換確定の Enter はブラウザによって isComposing が false になることがあるため
+        // compositionend 直後の keyCode 229 も含めて弾く
+        if (composing || e.isComposing || e.keyCode === 229) return;
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             submit();
