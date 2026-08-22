@@ -76,6 +76,9 @@ deactivate
   - チャット中に `/generate` コマンドで即座にアスキーアートを生成・共有したり、`/file` コマンドでテキストファイルを送信、`/download` で相手の共有したファイルを保存できます。
   - 利用可能なコマンド一覧はチャット内で `/cmd` と入力すると確認できます。
 
+
+<img width="437" height="420" alt="Image" src="https://github.com/user-attachments/assets/ace6ac77-8f6c-48dd-9eb5-ced466c34860" />
+
 ---
 
 ## コマンドライン引数を用いた生成
@@ -101,6 +104,8 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス<br>
   --factor FACTOR&nbsp;&nbsp;&nbsp;&nbsp;補正係数(デフォルト=0.55、指定なし=0.55)<br>
   --width WIDTH&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;出力の横幅(指定なし=画像の横幅)<br>
   --save&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;生成したASCII ARTをgenerated-art.txtとして保存(指定なし=保存しない)
+
+<img width="437" height="416" alt="Image" src="https://github.com/user-attachments/assets/651e9fbd-1380-4a50-b3ad-484c20c0899b" />
 
 ---
 
