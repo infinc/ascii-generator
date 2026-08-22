@@ -27,7 +27,7 @@ def run_cli(argv):
         print("エラー: 未対応のファイル、または拡張子の可能性があります。")
         sys.exit(1)
 
-    img = cv2.imread(args.path)
+    img = functions.read_image(args.path)
     if img is None:
         print(f"エラー: {args.path} を読み込めませんでした。パスを確認してください。")
         sys.exit(1)
@@ -70,10 +70,10 @@ if len(sys.argv) > 1:
 else:
     match functions.user_choice():
         case 1:
-            path = functions.gain_path(".jpg .jpeg .png .webp", "sample.jpg")
+            path = functions.gain_path(".jpg .jpeg .png .webp .heic", "sample.jpg")
             mime_type, _ = mimetypes.guess_type(path)
             if mime_type and mime_type.startswith('image'):
-                img = cv2.imread(path)
+                img = functions.read_image(path)
                 if img is None:
                     print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
                     print("生成中止")
@@ -90,10 +90,10 @@ else:
                 sys.exit()
 
         case 2:
-            path = functions.gain_path(".jpg .jpeg .png .webp", "sample.jpg")
+            path = functions.gain_path(".jpg .jpeg .png .webp .heic", "sample.jpg")
             mime_type, _ = mimetypes.guess_type(path)
             if mime_type and mime_type.startswith('image'):
-                img = cv2.imread(path)
+                img = functions.read_image(path)
                 if img is None:
                     print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
                     print("生成中止")

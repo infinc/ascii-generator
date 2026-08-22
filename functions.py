@@ -25,6 +25,37 @@ def user_choice():
         print("中止")
         sys.exit()
 
+def read_image(path):
+    """cv2.imread の代わり。cv2 が対応していない HEIC/HEIF は pillow-heif で読む。"""
+    img = cv2.imread(path)
+    if img is not None:
+        return img
+
+    if os.path.splitext(path)[1].lower() not in (".heic", ".heif"):
+        return None
+
+    try:
+        import pillow_heif
+    except ImportError:
+        print("エラー: HEICを読み込むには pillow-heif が必要です。")
+        print("pip install -r requirements.txt を実行してください。")
+        return None
+
+    try:
+        heif = pillow_heif.read_heif(path)
+        arr = np.ascontiguousarray(np.asarray(heif))
+    except Exception as e:
+        print(f"エラー: HEICを読み込めませんでした。({e})")
+        return None
+
+    # cv2 と同じ BGR 並びに揃える
+    if arr.ndim == 2:
+        return cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+    if arr.shape[2] == 4:
+        return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+    return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+
+
 def gain_path(extension, sample):
     print("例) cat.jpeg")
     print(f"対応している拡張子: {extension}")
