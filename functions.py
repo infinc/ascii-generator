@@ -310,6 +310,18 @@ def command_list():
     print(f"\r/show ... 最新のファイルの中身を表示します")
     print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
     print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... すぐにASCII ARTを生成します")
+    print(f"\r/clear ... 画面を綺麗にします")
+
+
+def clear_screen():
+    try:
+        lines = os.get_terminal_size().lines
+    except OSError:
+        lines = 0
+    if lines < 5:
+        lines = 40
+    print("\n" * lines, end="")
+    print(f"\r[System]画面をクリアしました")
 
 
 def help_list():
