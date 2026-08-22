@@ -1,17 +1,7 @@
-cat.gif
-drink.jpg
-tiger.jpg
-penguin.webp
-tiger.gif
-dog.gif
-cute.gif
-IMG_1954.jpg
-image.png
 /__pycache__
 /.idea
 /.DS_Store
 
-# Web版 (Cloudflare Workers)
 /web/node_modules
 /web/.wrangler
 /.wrangler
