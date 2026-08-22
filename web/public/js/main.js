@@ -5,6 +5,7 @@ import { connectAndAuth, sha256Hex, generateAbsoluteId } from "./achex.js";
 import { handleIncoming } from "./protocol.js";
 import { dispatch } from "./commands.js";
 import { initLanding, startLanding, stopLanding } from "./landing.js";
+import { isImageFile } from "./image.js";
 
 // Achex は {"ping":1} を無視するだけで応答も転送もしない。
 // 他クライアントに見えないアイドル対策として使える。
@@ -182,7 +183,7 @@ function setupDragAndDrop() {
         const file = e.dataTransfer.files[0];
         if (!file) return;
         ui.setStagedFile(file);
-        if (file.type.startsWith("image/")) {
+        if (isImageFile(file)) {
             ui.logHelper(`${file.name} を選択しました。/generate <[gray/color]> <width> <factor> で送信できます`);
         } else {
             ui.logHelper(`${file.name} を選択しました。/file で送信できます`);

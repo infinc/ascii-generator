@@ -36,6 +36,7 @@
           <li>インストール不要</li>
           <li>Python版と相互接続</li>
           <li>画像→ASCII ARTを即送信</li>
+          <li>HEIC (iPhoneの写真) 対応</li>
         </ul>
         <a class="scroll-hint" href="#about">下へスクロールして使い方を見る <span aria-hidden="true">↓</span></a>
       </div>
@@ -85,7 +86,7 @@
         <article class="card">
           <span class="card-icon" aria-hidden="true">▧</span>
           <h3>画像をその場で変換</h3>
-          <p><code>/generate</code> で画像を白黒/カラーの ASCII ART にして送信。<code>/download</code> で画像に戻すこともできます。</p>
+          <p><code>/generate</code> で画像を白黒/カラーの ASCII ART にして送信。iPhone の HEIC もそのまま扱えます。<code>/download</code> で画像に戻すこともできます。</p>
         </article>
       </div>
     </section>
@@ -106,6 +107,7 @@
       <p class="section-note">
         ブラウザにはファイルパスが無いため、<code>/generate</code> と <code>/file</code> はパスを取りません。
         画像やテキストファイルは<strong>画面にドラッグ&amp;ドロップ</strong>しておくか、コマンド実行時に開くファイル選択ダイアログから指定します。
+        JPEG・PNG・WEBP のほか <strong>HEIC (iPhoneの写真)</strong> も変換できます (HEIC を選んだときだけ復号用のデータを読み込むため、最初の1回は少し時間がかかります)。
         1回に500KBを超えるデータは送信できません。
       </p>
     </section>
