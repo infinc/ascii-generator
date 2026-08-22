@@ -102,6 +102,9 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
         elif msg.startswith("/cmd"):
             functions.command_list()
 
+        elif msg.strip() == "/clear":
+            functions.clear_screen()
+
         elif msg.startswith("/generate "):
             await instant_generate(msg, my_name, full_id, room_name, websocket)
 

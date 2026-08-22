@@ -15,19 +15,23 @@ function frameBytes(ctx, message) {
     return new TextEncoder().encode(JSON.stringify({ to: ctx.roomId, id: ctx.fullId, message })).length;
 }
 
+// /cmd の出力と、ホーム画面のコマンド表 (landing.js) の両方がここを参照する。
+export const COMMANDS = [
+    { cmd: "/cmd", desc: "全てのコマンドを表示します" },
+    { cmd: "/help", desc: "ヘルプを表示します" },
+    { cmd: "/file", desc: "ファイルを送信します(テキストベースのファイルのみ)" },
+    { cmd: "/show", desc: "最新のファイルの中身を表示します" },
+    { cmd: "/download <[raw/png]> <filename>", desc: "最新のファイルを .txt(そのまま) もしくは .png(写真に変換)して保存します" },
+    { cmd: "/generate <[gray/color]> <width> <factor(default=0.55)>", desc: "すぐにASCII ARTを生成します" },
+    { cmd: "/user <user_nameid>", desc: "相手がオンラインか確認します" },
+    { cmd: "/clear", desc: "チャットの表示を消して画面を綺麗にします" },
+    { cmd: "/exit", desc: "退出します" },
+];
+
 function showCommandList() {
     ui.logHelper("コマンドリスト");
-    for (const line of [
-        "/cmd ... 全てのコマンドを表示します",
-        "/help ... ヘルプを表示します",
-        "/file ... ファイルを送信します(テキストベースのファイルのみ)",
-        "/show ... 最新のファイルの中身を表示します",
-        "/download <[raw/png]> <filename> ... 最新のファイルを .txt(そのまま) もしくは .png(写真に変換)して保存します",
-        "/generate <[gray/color]> <width> <factor(default=0.55)> ... すぐにASCII ARTを生成します",
-        "/user <user_nameid> ... 相手がオンラインか確認します",
-        "/exit ... 退出します",
-    ]) {
-        ui.logLine(line, "helper");
+    for (const { cmd, desc } of COMMANDS) {
+        ui.logLine(`${cmd} ... ${desc}`, "helper");
     }
 }
 
@@ -243,6 +247,12 @@ export async function dispatch(ctx, msg) {
     }
     if (msg.startsWith("/help")) return showHelp();
     if (msg.startsWith("/cmd")) return showCommandList();
+    // 他のコマンドと違い完全一致で判定する (/clear123 などを誤認しないため)
+    if (msg.trim() === "/clear") {
+        ui.clearLog();
+        ui.logSystem("画面をクリアしました");
+        return;
+    }
     if (msg.startsWith("/generate")) return await cmdGenerate(ctx, msg);
     if (msg.startsWith("/download")) return cmdDownload(ctx, msg);
     if (msg.startsWith("/file")) return await cmdFile(ctx, msg);

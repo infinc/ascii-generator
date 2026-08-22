@@ -39,6 +39,11 @@ function lineEl(kind) {
     return div;
 }
 
+/** ログ表示を空にする (入室時と /clear で使う) */
+export function clearLog() {
+    el.log.replaceChildren();
+}
+
 /** 1行のプレーンなログ */
 export function logLine(text, kind = "plain") {
     const div = lineEl(kind);
