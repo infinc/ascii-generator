@@ -3,7 +3,8 @@
 
 import * as ui from "./ui.js";
 import { sendPayload } from "./protocol.js";
-import { imageToAscii } from "./image.js";
+import { imageToAscii, isImageFile } from "./image.js";
+import { isHeic } from "./heic.js";
 import { ASCII_CHARS_NORMAL, asciiToImage, stripAnsi } from "./ascii.js";
 
 // Achex は1回の送信が 500KB を超えると接続を切る (README 参照)
@@ -46,10 +47,10 @@ function showHelp() {
 async function resolveFile(wantImage) {
     const staged = ui.getStagedFile();
     if (staged) {
-        const isImage = staged.type.startsWith("image/");
-        if (isImage === wantImage) return staged;
+        if (isImageFile(staged) === wantImage) return staged;
     }
-    return await ui.openFilePicker(wantImage ? "image/*" : ".txt,.md,.json,.csv,.log,text/*");
+    // HEIC は MIME が空になる環境があるので、拡張子でも選べるようにする
+    return await ui.openFilePicker(wantImage ? "image/*,.heic,.heif" : ".txt,.md,.json,.csv,.log,text/*");
 }
 
 /** ファイル名に危険な文字が混ざらないようにする (Python 版は無検証) */
@@ -131,14 +132,15 @@ async function cmdGenerate(ctx, msg) {
         ui.logSystem("画像が選択されませんでした。");
         return;
     }
-    if (!file.type.startsWith("image/")) {
+    if (!isImageFile(file)) {
         ui.logError("指定された物は画像ではありません。");
         return;
     }
 
     let result;
     try {
-        ui.setBusy("生成中…");
+        // HEIC は初回だけ 1.4MB のデコーダ (libheif) を読み込むので、その旨を出す
+        ui.setBusy(isHeic(file) ? "HEICを復号しています… (初回はデコーダの読み込みに少し時間がかかります)" : "生成中…");
         result = await imageToAscii(file, mode, size, correctionFactor, ASCII_CHARS_NORMAL);
     } catch (e) {
         ui.logError(e.message);
@@ -239,25 +241,30 @@ function cmdShow(ctx) {
 export async function dispatch(ctx, msg) {
     if (!msg.trim()) return;
 
-    if (msg.startsWith("/exit")) {
+    // 引数を取らないコマンドは完全一致で判定する (/clear123 のような入力を誤認しないため)。
+    // 一致しなければ下の通常メッセージ送信に落ちる。
+    const bare = msg.trim();
+
+    if (bare === "/exit") {
         ui.logSystem("退出しました");
         sendPayload(ctx, `[System]${ctx.fullId} が退出しました`);
         ctx.leave();
         return;
     }
-    if (msg.startsWith("/help")) return showHelp();
-    if (msg.startsWith("/cmd")) return showCommandList();
-    // 他のコマンドと違い完全一致で判定する (/clear123 などを誤認しないため)
-    if (msg.trim() === "/clear") {
+    if (bare === "/help") return showHelp();
+    if (bare === "/cmd") return showCommandList();
+    if (bare === "/clear") {
         ui.clearLog();
         ui.logSystem("画面をクリアしました");
         return;
     }
+    if (bare === "/file") return await cmdFile(ctx, msg);
+    if (bare === "/show") return cmdShow(ctx);
+
+    // 引数を取るコマンドは前方一致のまま (引数なしで打つと使い方を表示する)
     if (msg.startsWith("/generate")) return await cmdGenerate(ctx, msg);
     if (msg.startsWith("/download")) return cmdDownload(ctx, msg);
-    if (msg.startsWith("/file")) return await cmdFile(ctx, msg);
     if (msg.startsWith("/user")) return cmdUser(ctx, msg);
-    if (msg.startsWith("/show")) return cmdShow(ctx);
 
     const size = frameBytes(ctx, msg);
     if (size > MAX_FRAME_BYTES) {

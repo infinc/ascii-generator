@@ -86,7 +86,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
         if not msg.strip():
             continue
 
-        if msg.startswith("/exit"):
+        if msg.strip() == "/exit":
             print(f"\r[System]退出しました")
             payload = {
                 "to": room_name,
@@ -96,10 +96,10 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
             await websocket.send(json.dumps(payload))
             break
 
-        elif msg.startswith("/help"):
+        elif msg.strip() == "/help":
             functions.help_list()
 
-        elif msg.startswith("/cmd"):
+        elif msg.strip() == "/cmd":
             functions.command_list()
 
         elif msg.strip() == "/clear":
@@ -201,7 +201,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
             print(f"{full_id}: ", end="", flush=True)
             continue
 
-        elif msg.startswith("/show"):
+        elif msg.strip() == "/show":
             if save is not None:
                 print(f"\r{save}")
             else:
@@ -331,7 +331,10 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
                 print(f"\r[System]エラー: {path} は存在しません。")
                 return
 
-            img = cv2.imread(path)
+            img = functions.read_image(path)
+            if img is None:
+                print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+                return
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             height, width = gray.shape

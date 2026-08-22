@@ -11,6 +11,12 @@
 // 旧パスは精度が低いために EXACT が追加された経緯があり、ここでは EXACT に合わせている。
 
 import { grayGenerator, rgbGenerator } from "./ascii.js";
+import { isHeic, decodeHeic } from "./heic.js";
+
+/** HEIC は環境によって file.type が空になるので、拡張子も見て画像として扱う */
+export function isImageFile(file) {
+    return Boolean(file) && ((file.type || "").startsWith("image/") || isHeic(file));
+}
 
 /** cv2 の COLOR_BGR2GRAY と同じ固定小数点演算 */
 function toGray(r, g, b) {
@@ -114,7 +120,11 @@ export async function imageToAscii(file, mode, width, factor, chars) {
     try {
         bitmap = await createImageBitmap(file);
     } catch (_) {
-        throw new Error("指定された物は画像ではありません。");
+        // Chrome や Firefox は HEIC を復号できないので、同梱の libheif で読み直す
+        if (!isHeic(file)) {
+            throw new Error("指定された物は画像ではありません。");
+        }
+        bitmap = await decodeHeic(file);
     }
 
     try {

@@ -44,8 +44,6 @@ pip install -r requirements.txt
 python main.py
 ```
 
-<img width="436" height="240" alt="Image" src="https://github.com/user-attachments/assets/dfb5410f-0478-414e-9d18-e217455028aa" />
-
 (追記) venv仮想環境を終了するにはdeactivateをします。
 ```bash
 deactivate
@@ -55,11 +53,11 @@ deactivate
 
 ## 各項目の概要
 ### 1. 画像から白黒のASCII ARTを生成
-- **説明**: 画像ファイル（JPG, JPEG, PNG, WEBP）を読み込み、白黒のアスキーアートを生成・表示します。
+- **説明**: 画像ファイル（JPG, JPEG, PNG, WEBP, HEIC）を読み込み、白黒のアスキーアートを生成・表示します。
 - **特徴**: サイズ変更や文字の濃淡（文字セット）の選択、結果のテキストファイル保存（`generated-art.txt`）が可能です。
 
 ### 2. 画像からカラーのASCII ARTを生成
-- **説明**: 画像ファイルをカラーのアスキーアートに変換します。
+- **説明**: 画像ファイル（JPG, JPEG, PNG, WEBP, HEIC）をカラーのアスキーアートに変換します。
 - **特徴**: RGBで色を表現して色がついたアスキーアートを表示できます。テキストファイルとしても保存は可能で、文字の判別は不可能ですが画像に再変換可能です。
 
 ### 3. gif画像から白黒のASCII ARTに変換し再生
@@ -94,7 +92,7 @@ python main.py [-h] (--color | --gray) [--factor FACTOR] [--width WIDTH] [--save
 
 **【必須な値】**
 
-path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス<br>
+path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG, JPEG, PNG, WEBP, HEIC)<br>
 
 **【どちらかが必要な値】**
 
@@ -109,6 +107,16 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス<br>
   --save&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;生成したASCII ARTをgenerated-art.txtとして保存(指定なし=保存しない)
 
 <img width="437" height="416" alt="Image" src="https://github.com/user-attachments/assets/651e9fbd-1380-4a50-b3ad-484c20c0899b" />
+
+---
+
+## HEIC (iPhoneの写真) について
+
+iPhone の標準形式である **HEIC / HEIF もそのまま変換できます**。白黒・カラーの生成、チャット中の `/generate`、コマンドライン引数のいずれでも使えます。
+
+- Python版: OpenCV は HEIC を読めないため、`pillow_heif` で読み込んでから OpenCV と同じ BGR 配列に変換しています。`pip install -r requirements.txt` で入ります。
+- Web版: ブラウザも HEIC を復号できません (Chrome / Firefox など) 。そのため [libheif](https://github.com/strukturag/libheif) の WebAssembly ビルドを `web/public/vendor/libheif/` に同梱し、**HEIC を選んだときだけ**読み込んで復号します (約1.4MB、初回のみ)。JPEG や PNG の変換では読み込まれません。
+- 同じ HEIC を Python版とWeb版で変換した結果は、実測で 2683文字中2文字 (0.07%) しか違いません。これは下記の「生成結果の差について」と同じ、リサイズの丸めによる差です。
 
 ---
 
@@ -191,6 +199,7 @@ npm run deploy
 - `numpy v2.5.1`
 - `opencv-python v4.13.0.92`
 - `websockets v16.1`
+- `pillow_heif v1.5.0` (HEICの読み込みに使用します)
 
 `requirements.txt`に記載されているので、次のコマンドを打つとすぐにダウンロードできます。
 ```bash
