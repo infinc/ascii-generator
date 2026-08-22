@@ -4,6 +4,7 @@ import * as ui from "./ui.js";
 import { connectAndAuth, sha256Hex, generateAbsoluteId } from "./achex.js";
 import { handleIncoming } from "./protocol.js";
 import { dispatch } from "./commands.js";
+import { initLanding, startLanding, stopLanding } from "./landing.js";
 
 // Achex は {"ping":1} を無視するだけで応答も転送もしない。
 // 他クライアントに見えないアイドル対策として使える。
@@ -123,7 +124,8 @@ async function joinRoom(myName, roomName, roomPassword) {
     reconnectAttempt = 0;
     sessionId += 1;
 
-    ui.dom.log.replaceChildren();
+    ui.clearLog();
+    stopLanding();
     ui.showChatScreen();
     ui.setRoomInfo(roomName, ctx.absoluteId, myName);
 
@@ -151,6 +153,7 @@ function leaveRoom() {
     ctx.ws = null;
     ui.setStagedFile(null);
     ui.showJoinScreen();
+    startLanding();
 }
 
 function setupDragAndDrop() {
@@ -272,6 +275,7 @@ function main() {
         return;
     }
     ui.initUi();
+    initLanding();
     setupJoinForm();
     setupInput();
     setupDragAndDrop();
