@@ -334,11 +334,11 @@ npm run deploy
 ---
 
 ## 必要モジュール (`requirements.txt`)
-- `numpy v2.5.1` <span style="color: gray;">(数値計算を素早く行うために使用します)</span>
-- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析にしようします)</span>
-- `websockets v16.1` <span style="color: gray;">(チャットするために使用します)</span>
-- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します)</span>
-- `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します)</span>
+- `numpy v2.5.1` <span style="color: gray;">(数値計算を素早く行うために使用します[BSD-3-Clause])</span>
+- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析に使用します[MIT License])</span>
+- `websockets v16.1` <span style="color: gray;">(チャットするために使用します[BSD-3-Clause])</span>
+- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します[GNU General Public License v2])</span>
+- `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します[Mozilla Public License 2.0])</span>
 
 `requirements.txt`に記載されているので、次のコマンドを打つとすぐにダウンロードできます。
 ```bash
@@ -352,3 +352,5 @@ pip install -r requirements.txt
 このリポジトリのコードは [MIT License](LICENSE) です。
 
 `sample.jpg` は作者本人が撮影した写真です。これを変換して生成した `grayASCII.txt`・`colorConvert.png`、および README 内のスクリーンショットも同様に作者本人の著作物です。これらの画像もコードと同じく MIT License の条件で自由にご利用いただけます。
+
+ただし `web/public/vendor/libheif/` は libheif (LGPL-3.0) の再配布物であり、**MIT License の対象外**です。改変は行っていません。詳細は [web/public/vendor/libheif/README.md](web/public/vendor/libheif/README.md) を参照してください。

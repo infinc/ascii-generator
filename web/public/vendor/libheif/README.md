@@ -1,5 +1,9 @@
 # libheif-js (vendored)
 
+**このディレクトリはリポジトリ本体の [MIT License](../../../../LICENSE) の対象外です。**
+libheif (LGPL-3.0) の再配布物であり、同梱している `LICENSE` の条件に従います。
+このリポジトリの作者が書いたコードではなく、改変も行っていません。
+
 ブラウザは HEIC/HEIF を復号できない (Chrome / Firefox など) ため、
 `/generate` で HEIC を扱えるように libheif の WebAssembly ビルドを同梱しています。
 
