@@ -2,7 +2,6 @@ import asyncio
 import json
 import ssl
 import sys
-import traceback
 import certifi
 import websockets
 import functions
@@ -171,7 +170,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                                     os.rename("Generated-photos.png", filename)
                                     print(f"\r[Helper]{filename} として保存しました")
                                 else:
-                                    print(f"\r[Helper]エラー: test")
+                                    print(f"\r[Helper]エラー: 画像の生成に失敗しました")
 
                                 if os.path.exists(temp_txt):
                                     os.remove(temp_txt)

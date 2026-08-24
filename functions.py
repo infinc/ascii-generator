@@ -3,6 +3,7 @@ import sys
 import cv2
 import time
 import os
+import re
 import numpy as np
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
@@ -259,7 +260,6 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
 
 
 def ascii_to_image(path, chars):
-    import re
     if not os.path.exists(path):
         print(f"エラー: {path} は存在しません。")
         print("生成中止")

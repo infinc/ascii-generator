@@ -1,7 +1,7 @@
-/__pycache__
+__pycache__/
 /.idea
-/.DS_Store
-
+.DS_Store
+/.claude
 /web/node_modules
 /web/.wrangler
 /.wrangler
