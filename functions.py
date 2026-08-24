@@ -3,6 +3,7 @@ import sys
 import cv2
 import time
 import os
+import re
 import numpy as np
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
@@ -82,8 +83,8 @@ def change_size_function(width, height):
             print("生成中止")
             sys.exit()
         try:
-            print("補正関数はfloat(小数点を含む数字)である必要があります")
-            factor = float(input("補正関数を入力してください(デフォルト=0.55): "))
+            print("補正係数はfloat(小数点を含む数字)である必要があります")
+            factor = float(input("補正係数を入力してください(デフォルト=0.55): "))
         except ValueError:
             print("エラー: 小数点を含む数字を入力してください")
             print("生成中止")
@@ -91,8 +92,8 @@ def change_size_function(width, height):
         new_height = math.ceil(height * (new_width / width) * factor)
     elif question == "n" or question == "N":
         try:
-            print("補正関数はfloat(小数点を含む数字)である必要があります")
-            factor = float(input("補正関数を入力してください(デフォルト=0.55): "))
+            print("補正係数はfloat(小数点を含む数字)である必要があります")
+            factor = float(input("補正係数を入力してください(デフォルト=0.55): "))
         except ValueError:
             print("エラー: 小数点を含む数字を入力してください")
             print("生成中止")
@@ -259,7 +260,6 @@ def gif_to_ascii_gray(width, height, cap, sleep_time):
 
 
 def ascii_to_image(path, chars):
-    import re
     if not os.path.exists(path):
         print(f"エラー: {path} は存在しません。")
         print("生成中止")
@@ -358,4 +358,4 @@ def clear_screen():
 def help_list():
     print(f"\r[Helper]退出するには/exitと入力してください")
     print(f"\r[Helper]全てのコマンドを出力するには、/cmdと入力してください")
-    print(f"\r[Helper]デフォルトの補正関数は0.55です。")
+    print(f"\r[Helper]デフォルトの補正係数は0.55です。")

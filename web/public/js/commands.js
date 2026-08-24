@@ -39,7 +39,7 @@ function showCommandList() {
 function showHelp() {
     ui.logHelper("退出するには/exitと入力してください");
     ui.logHelper("全てのコマンドを出力するには、/cmdと入力してください");
-    ui.logHelper("デフォルトの補正関数は0.55です。");
+    ui.logHelper("デフォルトの補正係数は0.55です。");
     ui.logHelper("ファイルは下の欄にドラッグ&ドロップするか、コマンド実行時に選択できます。");
 }
 
@@ -123,7 +123,7 @@ async function cmdGenerate(ctx, msg) {
         return;
     }
     if (!Number.isFinite(correctionFactor) || correctionFactor <= 0) {
-        ui.logError("補正関数は0より大きい数値で指定してください。");
+        ui.logError("補正係数は0より大きい数値で指定してください。");
         return;
     }
 

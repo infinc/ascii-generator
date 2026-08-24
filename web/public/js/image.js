@@ -113,7 +113,7 @@ export async function imageToAscii(file, mode, width, factor, chars) {
         throw new Error("横幅は1以上の整数で指定してください。");
     }
     if (!Number.isFinite(factor) || factor <= 0) {
-        throw new Error("補正関数は0より大きい数値で指定してください。");
+        throw new Error("補正係数は0より大きい数値で指定してください。");
     }
 
     let bitmap;
@@ -138,7 +138,7 @@ export async function imageToAscii(file, mode, width, factor, chars) {
 
         const height = Math.ceil(srcH * (width / srcW) * factor);
         if (height < 1) {
-            throw new Error("補正関数が小さすぎます。高さが0になりました。");
+            throw new Error("補正係数が小さすぎます。高さが0になりました。");
         }
 
         // 等倍で読み出す (ここでブラウザにリサイズさせない)

@@ -2,3 +2,4 @@ numpy==2.5.1
 opencv_python==4.13.0.92
 websockets==16.1
 pillow_heif==1.5.0
+certifi==2026.7.22
