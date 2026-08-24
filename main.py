@@ -144,7 +144,7 @@ else:
                 sys.exit()
 
         case 4:
-            path = functions.gain_path(".txt", "sample.txt")
+            path = functions.gain_path(".txt", "grayASCII.txt")
             mime_type, _ = mimetypes.guess_type(path)
             if mime_type == 'text/plain':
                 functions.ascii_chars_list()

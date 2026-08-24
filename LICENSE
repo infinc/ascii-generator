@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Image assets
+
+sample.jpg is an original photograph taken by the copyright holder (centerJA).
+The files derived from it and included in this repository (grayASCII.txt,
+colorConvert.png, and the screenshots embedded in README.md) are likewise
+original works of the copyright holder. These image assets are provided under
+the same MIT License terms stated above.

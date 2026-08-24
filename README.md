@@ -11,11 +11,11 @@ webサイトはこちら -> **https://chat.infinc.workers.dev/**
 
 <img width="189" height="252" alt="Image" src="https://github.com/user-attachments/assets/a900b6e8-18e2-4451-a744-b1c53ced8c92" />
 
-`sample.jpg`を補正関数0.55、横幅100で白黒アスキーアートに変換した`grayASCII.txt`のスクリーンショット
+`sample.jpg`を補正係数0.55、横幅100で白黒アスキーアートに変換した`grayASCII.txt`のスクリーンショット
 
 <img width="304.5" height="410" alt="Image" src="https://github.com/user-attachments/assets/07ee0e2d-b1b7-4059-88e0-8d6552315b37" />
 
-`sample.jpg`を補正関数0.55、横幅100でカラーアスキーアートに変換し、その後画像に再変換した画像 `colorConvert.png`
+`sample.jpg`を補正係数0.55、横幅100でカラーアスキーアートに変換し、その後画像に再変換した画像 `colorConvert.png`
 
 <img width="100" height="134" alt="Image" src="https://github.com/user-attachments/assets/c9cedeb7-227e-4fba-9ead-95a638362cbb" />
 
@@ -110,13 +110,23 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 
 ---
 
-## HEIC (iPhoneの写真) について
+## コマンド一覧
 
-iPhone の標準形式である **HEIC / HEIF もそのまま変換できます**。白黒・カラーの生成、チャット中の `/generate`、コマンドライン引数のいずれでも使えます。
+チャット中（`python main.py` のメニュー5 / Web版）で使えるコマンドです。チャット中に `/cmd` と入力しても表示されます。
 
-- Python版: OpenCV は HEIC を読めないため、`pillow_heif` で読み込んでから OpenCV と同じ BGR 配列に変換しています。`pip install -r requirements.txt` で入ります。
-- Web版: ブラウザも HEIC を復号できません (Chrome / Firefox など) 。そのため [libheif](https://github.com/strukturag/libheif) の WebAssembly ビルドを `web/public/vendor/libheif/` に同梱し、**HEIC を選んだときだけ**読み込んで復号します (約1.4MB、初回のみ)。JPEG や PNG の変換では読み込まれません。
-- 同じ HEIC を Python版とWeb版で変換した結果は、実測で 2683文字中2文字 (0.07%) しか違いません。これは下記の「生成結果の差について」と同じ、リサイズの丸めによる差です。
+| コマンド | 説明 |
+| --- | --- |
+| `/cmd` | 全てのコマンドを表示します |
+| `/help` | ヘルプを表示します |
+| `/file <file>` | ファイルを送信します（テキストベースのファイルのみ） |
+| `/show` | 最新のファイルの中身を表示します |
+| `/download <raw または png>` | 最新のファイルを .txt または .png として保存します |
+| `/generate <path> <gray または color> <width> <factor>` | すぐに ASCII ART を生成します |
+| `/clear` | 画面の表示を消して綺麗にします（自分の画面のみ） |
+| `/user <名前>` | 指定したユーザーがオンラインか確認します |
+| `/exit` | チャットから退出します |
+
+`<factor>` を省略した場合は 0.55 になります。Web版ではファイルパスが使えないため、`/generate` と `/file` の指定方法だけが変わります（詳細は「[使えるコマンド](#使えるコマンド)」を参照）。
 
 ---
 
@@ -129,6 +139,11 @@ iPhone の標準形式である **HEIC / HEIF もそのまま変換できます*
   **パスワード付きのルームであっても、第三者に傍受されるリスクやサーバー側にデータが経由する可能性があるため、機密情報、個人情報、パスワードなどのプライベートな情報は絶対に送信しないようご注意ください**。
 - **ASCII ARTの送信やfileの送信について**:
   `/file`や`/generate`でASCII ARTやfileを送信することが可能ですが、**500KBを超えるデータを一度に送信してしまうとAchexは送信しきれないため接続が切れてしまいます**。
+- **通信の暗号化について**:
+  接続は `wss://` (TLS) で、**サーバー証明書のチェーンとホスト名の検証は有効**にしています。ただし Achex のサーバーは前方秘匿性のある鍵交換 (ECDHE/DHE) に対応しておらず、RSA鍵交換の `AES256-GCM-SHA384` しか受け付けません。そのため Python 版ではこの暗号スイートを明示的に許可しています。**前方秘匿性が無い**ため、サーバーの秘密鍵が将来漏洩した場合、記録された過去の通信が復号され得ます。
+  また、Achex は `Origin` ヘッダの無い WebSocket ハンドシェイクを拒否するため、`Origin` だけは付けて接続しています (ブラウザを装う `User-Agent` は不要だったので送っていません)。
+- **接続が切れた場合について**:
+  チャット中に接続が切れると `[System]接続が切れました` と表示されます。そのまま **`connect` と入力すると、切断前と同じID・同じ部屋のまま再接続**できます (`python main.py` からやり直す必要はありません)。
 
 ---
 
@@ -154,7 +169,7 @@ iPhone の標準形式である **HEIC / HEIF もそのまま変換できます*
 
 ### 使えるコマンド
 
-`/cmd` `/help` `/file` `/show` `/download` `/generate` `/user` `/clear` `/exit` と、Python版と同じコマンドが使えます。`/clear` はそれまでのチャットの表示を消して画面を綺麗にするコマンドで、消えるのは自分の画面だけです (他の参加者には影響しません)。
+`/generate` `/user` など、Python版と同じコマンドが使えます。`/clear` はそれまでのチャットの表示を消して画面を綺麗にするコマンドで、消えるのは自分の画面だけです (他の参加者には影響しません)。
 
 ただしブラウザにはファイルパスが無いため、ファイルを扱うコマンドの指定方法だけが変わります。それ以外のコマンドと通信内容はPython版と同じです。
 
@@ -196,12 +211,21 @@ npm run deploy
 ---
 
 ## 必要モジュール (`requirements.txt`)
-- `numpy v2.5.1`
-- `opencv-python v4.13.0.92`
-- `websockets v16.1`
-- `pillow_heif v1.5.0` (HEICの読み込みに使用します)
+- `numpy v2.5.1` <span style="color: gray;">(数値計算を素早く行うために使用します)</span>
+- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析にしようします)</span>
+- `websockets v16.1` <span style="color: gray;">(チャットするために使用します)</span>
+- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します)</span>
+- `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します)</span>
 
 `requirements.txt`に記載されているので、次のコマンドを打つとすぐにダウンロードできます。
 ```bash
 pip install -r requirements.txt
 ```
+
+---
+
+## ライセンス
+
+このリポジトリのコードは [MIT License](LICENSE) です。
+
+`sample.jpg` は作者本人が撮影した写真です。これを変換して生成した `grayASCII.txt`・`colorConvert.png`、および README 内のスクリーンショットも同様に作者本人の著作物です。これらの画像もコードと同じく MIT License の条件で自由にご利用いただけます。

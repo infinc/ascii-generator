@@ -5,11 +5,10 @@
 const ACHEX_ORIGIN = "https://cloud.achex.ca";
 const ACHEX_URL = `${ACHEX_ORIGIN}/chat`;
 
-// Python 版 (chat_functions.py:247-250) と同じヘッダを上流に送る
+// Achex は Origin ヘッダの無い WebSocket ハンドシェイクを拒否するため、
+// Python 版と同じく Origin を上流に送る。
 const UPSTREAM_HEADERS = {
     Upgrade: "websocket",
-    "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
     Origin: ACHEX_ORIGIN,
 };
 
