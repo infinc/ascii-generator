@@ -1,4 +1,5 @@
 import math
+import mimetypes
 import sys
 import cv2
 import time
@@ -25,6 +26,14 @@ def user_choice():
         print("エラー: 数字を入力してください")
         print("中止")
         sys.exit()
+
+def is_image_path(path):
+    """MIME または拡張子で画像かどうかを判定する。HEIC/HEIF は MIME が無い環境がある。"""
+    mime_type, _ = mimetypes.guess_type(path)
+    if mime_type and mime_type.startswith("image"):
+        return True
+    return os.path.splitext(path)[1].lower() in (".heic", ".heif")
+
 
 def read_image(path):
     """cv2.imread の代わり。cv2 が対応していない HEIC/HEIF は pillow-heif で読む。"""
@@ -72,6 +81,20 @@ def gain_path(extension, sample):
     return path
 
 
+def read_factor():
+    """補正係数を入力する。空 Enter ならデフォルト 0.55。"""
+    print("補正係数はfloat(小数点を含む数字)である必要があります")
+    raw = input("補正係数を入力してください(デフォルト=0.55): ").strip()
+    if raw == "":
+        return 0.55
+    try:
+        return float(raw)
+    except ValueError:
+        print("エラー: 小数点を含む数字を入力してください")
+        print("生成中止")
+        sys.exit()
+
+
 def change_size_function(width, height):
     question = input("サイズを変更しますか?[y/n]: ")
 
@@ -82,22 +105,10 @@ def change_size_function(width, height):
             print("エラー: 数字を入力してください")
             print("生成中止")
             sys.exit()
-        try:
-            print("補正係数はfloat(小数点を含む数字)である必要があります")
-            factor = float(input("補正係数を入力してください(デフォルト=0.55): "))
-        except ValueError:
-            print("エラー: 小数点を含む数字を入力してください")
-            print("生成中止")
-            sys.exit()
+        factor = read_factor()
         new_height = math.ceil(height * (new_width / width) * factor)
     elif question == "n" or question == "N":
-        try:
-            print("補正係数はfloat(小数点を含む数字)である必要があります")
-            factor = float(input("補正係数を入力してください(デフォルト=0.55): "))
-        except ValueError:
-            print("エラー: 小数点を含む数字を入力してください")
-            print("生成中止")
-            sys.exit()
+        factor = read_factor()
         new_width = width
         new_height = math.ceil(height * (new_width / width) * factor)
     else:
@@ -340,7 +351,7 @@ def command_list():
     print(f"\r/file <file> ... ファイルを送信します(テキストベースのファイルのみ)")
     print(f"\r/show ... 最新のファイルの中身を表示します")
     print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
-    print(f"\r/generate <path> <[gray/color]> <width> <factor(default=0.55)> ... すぐにASCII ARTを生成します")
+    print(f"\r/generate <path> <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(factor省略時=0.55)")
     print(f"\r/clear ... 画面を綺麗にします")
 
 

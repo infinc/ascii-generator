@@ -10,7 +10,6 @@ import string
 import re
 import hashlib
 import os
-import mimetypes
 import cv2
 import math
 
@@ -392,57 +391,55 @@ def start():
 async def instant_generate(msg, my_name, full_id, room_name, websocket):
     try:
         parts = msg.split()
-        if len(parts) == 5:
-            path = parts[1]
-            color = parts[2]
-            size = int(parts[3])
-            correction_factor = float(parts[4])
+        # factor は省略可 (省略時は 0.55)
+        if len(parts) not in (4, 5):
+            print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> [factor]")
+            return
 
-            if not os.path.exists(path):
-                print(f"\r[System]エラー: {path} は存在しません。")
-                return
+        path = parts[1]
+        color = parts[2]
+        size = int(parts[3])
+        correction_factor = float(parts[4]) if len(parts) == 5 else 0.55
 
-            img = functions.read_image(path)
-            if img is None:
-                print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
-                return
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            height, width = gray.shape
+        if not os.path.exists(path):
+            print(f"\r[System]エラー: {path} は存在しません。")
+            return
 
-            mime_type, _ = mimetypes.guess_type(path)
-            if width >= size:
-                height = math.ceil(height * (size / width) * correction_factor)
-            else:
-                print(f"\r[System]エラー: 画像のサイズよりも大きい値を入力することはできません。")
-                return
+        if not functions.is_image_path(path):
+            print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+            return
 
-            if color == "gray":
-                if mime_type and mime_type.startswith('image'):
-                    resized_gray = cv2.resize(gray, (size, height))
-                    pixels = resized_gray.flatten().astype(int)
-                    result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
-                    print(f"\r{result}")
-                    await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
-                else:
-                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+        img = functions.read_image(path)
+        if img is None:
+            print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
+            return
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        height, width = gray.shape
 
-            elif color == "color":
-                if mime_type and mime_type.startswith('image'):
-                    resized_rgb = cv2.resize(rgb, (size, height))
-                    resized_gray = cv2.resize(gray, (size, height))
-                    pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
-                    pixels_gray = resized_gray.flatten().astype(int)
-                    result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
-                    print(f"\r{result}")
-                    await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
-                else:
-                    print(f"\r[Helper]エラー: 指定された物は画像ではありません。")
-            else:
-                print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
-
+        if width >= size:
+            height = math.ceil(height * (size / width) * correction_factor)
         else:
-            print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> <factor>")
+            print(f"\r[System]エラー: 画像のサイズよりも大きい値を入力することはできません。")
+            return
+
+        if color == "gray":
+            resized_gray = cv2.resize(gray, (size, height))
+            pixels = resized_gray.flatten().astype(int)
+            result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
+            print(f"\r{result}")
+            await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
+
+        elif color == "color":
+            resized_rgb = cv2.resize(rgb, (size, height))
+            resized_gray = cv2.resize(gray, (size, height))
+            pixels_rgb = resized_rgb.reshape(-1, 3).astype(int)
+            pixels_gray = resized_gray.flatten().astype(int)
+            result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
+            print(f"\r{result}")
+            await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
+        else:
+            print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
     except Exception as e:
         print(f"\r[System]エラー: {e}")
 

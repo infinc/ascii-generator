@@ -184,7 +184,7 @@ function setupDragAndDrop() {
         if (!file) return;
         ui.setStagedFile(file);
         if (isImageFile(file)) {
-            ui.logHelper(`${file.name} を選択しました。/generate <[gray/color]> <width> <factor> で送信できます`);
+            ui.logHelper(`${file.name} を選択しました。/generate <[gray/color]> <width> [factor] で送信できます`);
         } else {
             ui.logHelper(`${file.name} を選択しました。/file で送信できます`);
         }

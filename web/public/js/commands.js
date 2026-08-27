@@ -23,7 +23,7 @@ export const COMMANDS = [
     { cmd: "/file", desc: "ファイルを送信します(テキストベースのファイルのみ)" },
     { cmd: "/show", desc: "最新のファイルの中身を表示します" },
     { cmd: "/download <[raw/png]> <filename>", desc: "最新のファイルを .txt(そのまま) もしくは .png(写真に変換)して保存します" },
-    { cmd: "/generate <[gray/color]> <width> <factor(default=0.55)>", desc: "すぐにASCII ARTを生成します" },
+    { cmd: "/generate <[gray/color]> <width> [factor]", desc: "すぐにASCII ARTを生成します(factor省略時=0.55)" },
     { cmd: "/user <user_nameid>", desc: "相手がオンラインか確認します" },
     { cmd: "/clear", desc: "チャットの表示を消して画面を綺麗にします" },
     { cmd: "/exit", desc: "退出します" },
@@ -106,13 +106,14 @@ async function uploaded(ctx, content, displayName, originalMsg) {
 
 async function cmdGenerate(ctx, msg) {
     const parts = msg.trim().split(/\s+/);
-    if (parts.length !== 4) {
-        ui.logSystem("コマンド: /generate <[gray/color]> <width> <factor>");
+    // factor は省略可 (省略時は 0.55) — Python 版と揃える
+    if (parts.length !== 3 && parts.length !== 4) {
+        ui.logSystem("コマンド: /generate <[gray/color]> <width> [factor]");
         return;
     }
     const mode = parts[1];
     const size = Number(parts[2]);
-    const correctionFactor = Number(parts[3]);
+    const correctionFactor = parts.length === 4 ? Number(parts[3]) : 0.55;
 
     if (mode !== "gray" && mode !== "color") {
         ui.logError("gray又はcolorを選択してください。");
