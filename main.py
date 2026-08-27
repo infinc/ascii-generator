@@ -1,9 +1,9 @@
 import argparse
 import math
+import mimetypes
 import chat_functions
 import functions
 from functions import cv2
-import mimetypes
 from functions import sys
 
 
@@ -22,8 +22,7 @@ def parse_cli_args(argv):
 def run_cli(argv):
     args = parse_cli_args(argv)
 
-    mime_type, _ = mimetypes.guess_type(args.path)
-    if not (mime_type and mime_type.startswith('image')):
+    if not functions.is_image_path(args.path):
         print("エラー: 未対応のファイル、または拡張子の可能性があります。")
         sys.exit(1)
 
@@ -71,8 +70,7 @@ else:
     match functions.user_choice():
         case 1:
             path = functions.gain_path(".jpg .jpeg .png .webp .heic", "sample.jpg")
-            mime_type, _ = mimetypes.guess_type(path)
-            if mime_type and mime_type.startswith('image'):
+            if functions.is_image_path(path):
                 img = functions.read_image(path)
                 if img is None:
                     print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
@@ -91,8 +89,7 @@ else:
 
         case 2:
             path = functions.gain_path(".jpg .jpeg .png .webp .heic", "sample.jpg")
-            mime_type, _ = mimetypes.guess_type(path)
-            if mime_type and mime_type.startswith('image'):
+            if functions.is_image_path(path):
                 img = functions.read_image(path)
                 if img is None:
                     print(f"エラー: {path} を読み込めませんでした。パスを確認してください。")
@@ -128,8 +125,8 @@ else:
                 width, height = functions.change_size_function(width, height)
                 try:
                     skip_frames = int(input("何フレームスキップしますか?(normal=1 or 2): "))
-                    if skip_frames < 0:
-                        print("エラー: 負の値は入力できません。")
+                    if skip_frames < 1:
+                        print("エラー: 1以上の整数を入力してください。0は指定できません。")
                         print("生成中止")
                         sys.exit()
                 except ValueError:

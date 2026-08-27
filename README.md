@@ -191,6 +191,8 @@ real_room_id = hashlib.sha256(secret_key.encode()).hexdigest()
 
 ただしハッシュ値は**通信の秘匿には関与しない**（宛先を隠す仕組みではない）ので、README の「WebSocket`Achex`に関する注意点」に書いたとおり、機密情報は送らないでください。
 
+また、同じ部屋に入れた参加者同士は信頼できる相手とみなされます。`/opsyncsave` などで共有バッファを上書きできるため、**部屋に入れた人は全員、最新の共有ファイルを差し替えられます**。
+
 参加者のIDは `secrets.choice` で作る5文字+5文字のランダムな文字列です ([`chat_functions.py`](chat_functions.py) の `generate_absolute_id`)。同じユーザーネームの人が複数いても区別でき、**接続が切れて `connect` で再接続したときも同じIDを引き継ぐ**ので、他の参加者からは同じ人物として見えます。
 
 ### Web版はブラウザだけで同じ結果を出している
@@ -244,7 +246,7 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 | `/file <file>` | ファイルを送信します（テキストベースのファイルのみ） |
 | `/show` | 最新のファイルの中身を表示します |
 | `/download <raw または png>` | 最新のファイルを .txt または .png として保存します |
-| `/generate <path> <gray または color> <width> <factor>` | すぐに ASCII ART を生成します |
+| `/generate <path> <gray または color> <width> [factor]` | すぐに ASCII ART を生成します |
 | `/clear` | 画面の表示を消して綺麗にします（自分の画面のみ） |
 | `/user <名前>` | 指定したユーザーがオンラインか確認します |
 | `/exit` | チャットから退出します |
@@ -298,7 +300,7 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 
 | | Python版 | Web版 |
 |---|---|---|
-| `/generate` | `/generate <path> <[gray/color]> <width> <factor>` | `/generate <[gray/color]> <width> <factor>` (path を廃止) |
+| `/generate` | `/generate <path> <[gray/color]> <width> [factor]` | `/generate <[gray/color]> <width> [factor]` (path を廃止) |
 | `/file` | `/file <path>` | `/file` (引数なし) |
 
 画像とテキストファイルは、**画面にドラッグ&ドロップ**しておくか、コマンド実行時に開くファイル選択ダイアログから指定します。`/download` はブラウザのダウンロードとして保存されます。
@@ -335,9 +337,9 @@ npm run deploy
 
 ## 必要モジュール (`requirements.txt`)
 - `numpy v2.5.1` <span style="color: gray;">(数値計算を素早く行うために使用します[BSD-3-Clause])</span>
-- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析に使用します[MIT License])</span>
+- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析に使用します[Apache-2.0])</span>
 - `websockets v16.1` <span style="color: gray;">(チャットするために使用します[BSD-3-Clause])</span>
-- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します[GNU General Public License v2])</span>
+- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します[BSD-3-Clause])</span>
 - `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します[Mozilla Public License 2.0])</span>
 
 `requirements.txt`に記載されているので、次のコマンドを打つとすぐにダウンロードできます。
