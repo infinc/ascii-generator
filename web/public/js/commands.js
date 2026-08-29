@@ -22,7 +22,7 @@ export const COMMANDS = [
     { cmd: "/help", desc: "ヘルプを表示します" },
     { cmd: "/file", desc: "ファイルを送信します(テキストベースのファイルのみ)" },
     { cmd: "/show", desc: "最新のファイルの中身を表示します" },
-    { cmd: "/download <[raw/png]> <filename>", desc: "最新のファイルを .txt(そのまま) もしくは .png(写真に変換)して保存します" },
+    { cmd: "/download <[raw/png]>", desc: "最新のファイルを .txt(そのまま) もしくは .png(写真に変換)して保存します" },
     { cmd: "/generate <[gray/color]> <width> [factor]", desc: "すぐにASCII ARTを生成します(factor省略時=0.55)" },
     { cmd: "/user <user_nameid>", desc: "相手がオンラインか確認します" },
     { cmd: "/clear", desc: "チャットの表示を消して画面を綺麗にします" },
