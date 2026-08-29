@@ -353,6 +353,7 @@ def command_list():
     print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
     print(f"\r/generate <path> <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(factor省略時=0.55)")
     print(f"\r/clear ... 画面を綺麗にします")
+    print(f"\r/exit ... 会話を終了します")
 
 
 def clear_screen():

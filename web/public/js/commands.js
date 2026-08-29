@@ -213,7 +213,7 @@ function cmdDownload(ctx, msg) {
         return;
     }
 
-    ui.logSystem("コマンド: /download <[raw/png]> <filename>");
+    ui.logSystem("コマンド: /download <[raw/png]>");
 }
 
 function cmdUser(ctx, msg) {

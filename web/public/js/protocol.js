@@ -3,7 +3,6 @@
 
 import * as ui from "./ui.js";
 
-/** Python: msg.split("\n", 1) 相当 (JS の split(sep, limit) とは挙動が違うので手で分ける) */
 function splitOnce(text, sep) {
     const i = text.indexOf(sep);
     if (i === -1) return [text];
@@ -40,7 +39,7 @@ export function handleIncoming(ctx, raw) {
     if (!msg) return;
 
     const sender = data.id != null ? data.id : "unknown";
-    if (sender === ctx.fullId) return; // 自分のメッセージは Achex から返ってくるので捨てる
+    if (sender === ctx.fullId) return;
 
     if (msg.startsWith("/user ")) {
         const targetUser = msg.slice("/user ".length).trim();

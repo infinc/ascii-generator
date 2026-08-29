@@ -1,5 +1,3 @@
-// 画面まわり。受信文字列は必ず textContent / DOM API で組み立てる (innerHTML は使わない)。
-
 import { ansiToFragment } from "./ansi.js";
 
 const el = {};
@@ -39,12 +37,10 @@ function lineEl(kind) {
     return div;
 }
 
-/** ログ表示を空にする (入室時と /clear で使う) */
 export function clearLog() {
     el.log.replaceChildren();
 }
 
-/** 1行のプレーンなログ */
 export function logLine(text, kind = "plain") {
     const div = lineEl(kind);
     div.textContent = text;
@@ -63,9 +59,7 @@ export function logError(text) {
     logLine(`[Helper]エラー: ${text}`, "error");
 }
 
-/**
- * 他者/自分のメッセージ。ANSI が含まれていれば ASCII ART として <pre> で描く。
- */
+
 export function logMessage(sender, msg, self = false) {
     const div = lineEl(self ? "msg self" : "msg");
     const who = document.createElement("span");
@@ -84,7 +78,6 @@ export function logMessage(sender, msg, self = false) {
     append(div);
 }
 
-/** ASCII ART を等幅・行間なしで描く <pre> */
 export function artBlock(text) {
     const pre = document.createElement("pre");
     pre.className = "art";
@@ -164,7 +157,6 @@ export function formatBytes(n) {
     return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
-/** ファイル選択ダイアログを開く。キャンセルされたら null。 */
 export function openFilePicker(accept) {
     return new Promise((resolve) => {
         const input = el["file-picker"];
@@ -178,13 +170,11 @@ export function openFilePicker(accept) {
             resolve(f);
         };
         input.onchange = () => done(input.files[0] || null);
-        // キャンセル時に change が飛ばないブラウザ向けの保険
         window.addEventListener("focus", () => setTimeout(() => done(input.files[0] || null), 300), { once: true });
         input.click();
     });
 }
 
-/** Blob をダウンロードさせる */
 export function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
