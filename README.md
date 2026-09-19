@@ -80,6 +80,26 @@ deactivate
 
 <img width="437" height="420" alt="Image" src="https://github.com/user-attachments/assets/ace6ac77-8f6c-48dd-9eb5-ced466c34860" />
 
+### 6. BLEを使用してチャット（インターネット不要）
+- **説明**: Bluetooth Low Energy だけで近くの端末とチャットします。インターネットにもサーバーにも一切接続しません。
+- **特徴**:
+  - 5番と同じように名前・ルーム名・パスワードを入力したあと、`make` / `join` / `leave` を選びます。
+    - `make` … この端末が部屋のホストになります（Bluetooth の Peripheral として広告を出し、5番の Achex サーバーの役割を肩代わりします）
+    - `join` … 既にある部屋を探して参加します（Central として接続します）
+    - `leave` … 何もせずに終了します
+  - **ルーム名とパスワードが両方一致した相手としか繋がりません。** この2つから Service UUID を導出しているため、値が違うホストはそもそも検索候補に上がりません。接続後にも HMAC で確認します。
+  - パスワードを間違えた場合は「認証に失敗」ではなく **「部屋が見つかりませんでした」** になります（探している UUID 自体が変わるため）。
+  - 同時に参加できるのは**ホストを除いて4人まで**です。Bluetooth コントローラが同時に受けられる接続数に限りがあるため、5人目は「部屋が満員です」と断ります。
+  - 届く距離はおおよそ **5〜15m** です。壁を挟むと大きく短くなります。
+  - **`/file` `/show` `/download` `/generate` は使えません。** BLE は1回に送れるデータ量が非常に小さく（20〜182バイト）、ASCII ART の転送には向かないためです。入力すると「BLEでは未対応です」と表示され、`/cmd` の一覧にも出ません。使えるのは通常の発言と `/user` `/cmd` `/help` `/clear` `/exit` です。
+  - 切断された場合の扱いは5番と同じで、`connect` と入力すると同じIDのまま再接続できます。
+
+> [!IMPORTANT]
+> **macOS では実行元のアプリに Bluetooth の利用許可が必要です。**
+> macOS は、Info.plist に `NSBluetoothAlwaysUsageDescription` を持たないアプリが Bluetooth に触れると、**許可ダイアログを出さずにプロセスを強制終了**します（クラッシュログに `TCC_CRASHING_DUE_TO_PRIVACY_VIOLATION` と記録されます）。
+> PyCharm はこのキーを持っているので、**PyCharm から実行すれば動作します**（初回に許可ダイアログが出ます）。
+> 一方 **Terminal.app はこのキーを持たないため、`python main.py` を直接実行すると6番で強制終了します**。この場合は PyCharm から実行してください。
+
 ---
 
 ## 技術的な仕組み・工夫した点
@@ -253,6 +273,8 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 
 `<factor>` を省略した場合は 0.55 になります。Web版ではファイルパスが使えないため、`/generate` と `/file` の指定方法だけが変わります（詳細は「[使えるコマンド](#使えるコマンド)」を参照）。
 
+**メニュー6（BLE）では `/file` `/show` `/download` `/generate` は使えません。** BLE は1回に送れるデータ量が20〜182バイトしかなく、ASCII ART の転送に向かないためです。これらを入力すると `[System]/file はBLEでは未対応です` と表示され、`/cmd` の一覧からも省かれます。残りの `/cmd` `/help` `/user` `/clear` `/exit` と通常の発言は5番と同じように使えます。
+
 ---
 
 ## WebSocket`Achex`に関する注意点
@@ -341,6 +363,11 @@ npm run deploy
 - `websockets v16.1` <span style="color: gray;">(チャットするために使用します[BSD-3-Clause])</span>
 - `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します[BSD-3-Clause])</span>
 - `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します[Mozilla Public License 2.0])</span>
+- `bleak v2.0.0` <span style="color: gray;">(メニュー6のBLEチャットで、部屋を探して接続する側に使用します[MIT])</span>
+- `bless v0.3.0` <span style="color: gray;">(メニュー6のBLEチャットで、部屋を開いて待ち受ける側に使用します[MIT])</span>
+
+`bleak` は `2.x` 系に固定しています。`bless v0.3.0` は `bleak` のバックエンド内部に依存しており、`bleak 3.x` ではその内部構造が変わっているため動作が保証されません（`bless v0.3.0` は 2025-12-23 公開で、当時の `bleak` 最新は `2.0.0` でした）。
+`bleak` と `bless` は**メニュー6を選んだときにだけ読み込まれる**ので、これらを入れていなくてもメニュー1〜5は問題なく動作します。
 
 `requirements.txt`に記載されているので、次のコマンドを打つとすぐにダウンロードできます。
 ```bash

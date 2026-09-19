@@ -4,6 +4,7 @@ import ssl
 import sys
 import certifi
 import websockets
+import chat_transport
 import functions
 import secrets
 import string
@@ -16,6 +17,21 @@ import math
 save = None
 disconnected = False
 
+# コマンドと、それを使うために通信路が備えている必要がある機能の対応。
+_CAP_FOR_CMD = {
+    "/file": "supports_files",
+    "/show": "supports_files",
+    "/download": "supports_files",
+    "/generate": "supports_generate",
+    "/user": "supports_user_lookup",
+}
+
+
+def reset_disconnected():
+    """新しい接続を張る前に切断フラグを戻す。ble_chat からも使う。"""
+    global disconnected
+    disconnected = False
+
 
 def notify_disconnected():
     """切断を1回だけ通知する。再接続の入力は send_messages の input が受け取る。"""
@@ -27,10 +43,10 @@ def notify_disconnected():
     print("\r[System]続けるにはconnect と入力して再接続してください")
 
 
-async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
+async def receive_messages(transport, my_name, full_id, room_name, absolute_id):
     global save
     try:
-        async for message in websocket:
+        async for message in transport:
             data = json.loads(message)
 
             if data.get("auth") == "OK":
@@ -42,7 +58,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                 if sender == full_id:
                     continue
 
-                if msg.startswith("/user "):
+                if msg.startswith("/user ") and transport.supports_user_lookup:
                     target_user = msg.split(" ", 1)[1].strip()
                     if target_user in (my_name, absolute_id, full_id):
                         payload = {
@@ -50,7 +66,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                             "id": full_id,
                             "message": f"/opfounduser {sender}"
                         }
-                        await websocket.send(json.dumps(payload))
+                        await transport.send(payload)
                     continue
                 elif msg.startswith("/opfounduser "):
                     requester = msg.split(" ", 1)[1].strip()
@@ -74,14 +90,15 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
                 print(f"\r{sender}: {msg}")
                 print(f"{full_id}: ", end="", flush=True)
 
-                if msg.strip() == "/show" and sender != full_id and save is not None:
+                if (msg.strip() == "/show" and sender != full_id
+                        and save is not None and transport.supports_files):
                     payload = {
                         "to": room_name,
                         "id": full_id,
                         "message": f"/opfiledm {sender}\n{save}"
                     }
-                    await websocket.send(json.dumps(payload))
-    except websockets.exceptions.ConnectionClosed:
+                    await transport.send(payload)
+    except chat_transport.TransportClosed:
         pass
 
     # サーバー側から正常に閉じられた場合は async for が終わるだけで例外が出ないため、
@@ -89,7 +106,7 @@ async def receive_messages(websocket, my_name, full_id, room_name, absolute_id):
     notify_disconnected()
 
 
-async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
+async def send_messages(transport, my_name, full_id, room_name, absolute_id):
     global save
     loop = asyncio.get_running_loop()
 
@@ -107,6 +124,15 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
         if not msg.strip():
             continue
 
+        # 通信方式によって使えないコマンドをここで弾く。BLE は帯域が狭く
+        # ファイル転送に対応していないので、黙って失敗させずに理由を出す。
+        cmd = msg.strip().split(" ", 1)[0] if msg.strip().startswith("/") else ""
+        cap = _CAP_FOR_CMD.get(cmd)
+        if cap and not getattr(transport, cap):
+            print(f"\r[System]{cmd} は{transport.display_name}では未対応です")
+            print(f"{full_id}: ", end="", flush=True)
+            continue
+
         try:
             if msg.strip() == "/exit":
                 print(f"\r[System]退出しました")
@@ -115,20 +141,20 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     "id": full_id,
                     "message": f"[System]{full_id} が退出しました"
                 }
-                await websocket.send(json.dumps(payload))
+                await transport.send(payload)
                 break
 
             elif msg.strip() == "/help":
                 functions.help_list()
 
             elif msg.strip() == "/cmd":
-                functions.command_list()
+                functions.command_list(transport)
 
             elif msg.strip() == "/clear":
                 functions.clear_screen()
 
             elif msg.startswith("/generate "):
-                await instant_generate(msg, my_name, full_id, room_name, websocket)
+                await instant_generate(msg, my_name, full_id, room_name, transport)
 
             elif msg.startswith("/download "):
                 if save is not None:
@@ -191,7 +217,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     try:
                         with open(file, "r", encoding="utf-8") as f:
                             file_content = f.read()
-                        await uploaded(file_content, file, room_name, full_id, websocket, msg)
+                        await uploaded(file_content, file, room_name, full_id, transport, msg)
 
                     except Exception as e:
                         print(f"\r[Helper]エラー: {e}")
@@ -218,7 +244,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     "id": full_id,
                     "message": f"/user {target_user}"
                 }
-                await websocket.send(json.dumps(payload))
+                await transport.send(payload)
 
                 print(f"{full_id}: ", end="", flush=True)
                 continue
@@ -233,7 +259,7 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                             "id": full_id,
                             "message": msg
                         }
-                        await websocket.send(json.dumps(payload))
+                        await transport.send(payload)
 
                     except Exception:
                         print(f"\r[Helper]エラー: ダウンロードするファイルが存在しません")
@@ -243,8 +269,8 @@ async def send_messages(websocket, my_name, full_id, room_name, absolute_id):
                     "id": full_id,
                     "message": msg
                 }
-                await websocket.send(json.dumps(payload))
-        except websockets.exceptions.ConnectionClosed:
+                await transport.send(payload)
+        except chat_transport.TransportClosed:
             notify_disconnected()
             continue
 
@@ -264,8 +290,7 @@ async def wait_for_connect():
 
 async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin):
     """1回分の接続。切断されて再接続を求められたら "reconnect" を返す。"""
-    global disconnected
-    disconnected = False
+    reset_disconnected()
 
     uri = f"wss://cloud.achex.ca/chat"
 
@@ -287,6 +312,7 @@ async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin
     }
 
     async with websockets.connect(uri, ssl=ssl_context, additional_headers=headers) as websocket:
+        transport = chat_transport.WebSocketTransport(websocket)
         secret_key = f"{room_name}::{room_password}"
         real_room_id = hashlib.sha256(secret_key.encode()).hexdigest()
 
@@ -294,11 +320,11 @@ async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin
             "auth": real_room_id
         }
 
-        await websocket.send(json.dumps(auth_data))
+        await transport.send(auth_data)
 
         try:
             while True:
-                response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                response = await transport.recv(timeout=5.0)
                 res_data = json.loads(response)
 
                 if "auth" in res_data:
@@ -318,7 +344,7 @@ async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin
 
         full_id = f"[{absolute_id}]{my_name}"
         joined = "が再接続しました" if rejoin else "が参加しました"
-        await websocket.send(json.dumps({"to": real_room_id, "id": "[System]", "message": f"{full_id} {joined}"}))
+        await transport.send({"to": real_room_id, "id": "[System]", "message": f"{full_id} {joined}"})
         print(f"\r-----------------------------")
         print(f"\rあなたのユーザーネーム: {my_name}")
         print(f"\rあなたのID: {absolute_id}")
@@ -328,23 +354,29 @@ async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin
         print(f"\r[System]接続しました。退出するには/exitと入力してください")
         print(f"\r[System]全てのコマンドを出力するには、/cmdと入力してください")
 
-        receive_task = asyncio.create_task(receive_messages(websocket, my_name, full_id, real_room_id, absolute_id))
-        send_task = asyncio.create_task(send_messages(websocket, my_name, full_id, real_room_id, absolute_id))
+        receive_task = asyncio.create_task(receive_messages(transport, my_name, full_id, real_room_id, absolute_id))
+        send_task = asyncio.create_task(send_messages(transport, my_name, full_id, real_room_id, absolute_id))
 
         result = await send_task
         receive_task.cancel()
         return result
 
 
-async def main():
-    print("匿名性は低いです。パスワードや個人情報を送らないでください。")
-    print("通信はTLSで暗号化され証明書も検証しますが、Achex側の制約で前方秘匿性はありません。")
+def prompt_room_info():
+    """ユーザー名・部屋ID・パスワードを聞く。Achex と BLE で共通。"""
     my_name = input("使用するユーザーネームを入力: ")
     room_name = input("参加する部屋のIDを入力: ")
     print("パスワードは入力しなくてもデフォルトでpasswordになります。")
     room_password = input("参加する部屋のパスワードを入力: ")
     if not room_password:
         room_password = "password"
+    return my_name, room_name, room_password
+
+
+async def main():
+    print("匿名性は低いです。パスワードや個人情報を送らないでください。")
+    print("通信はTLSで暗号化され証明書も検証しますが、Achex側の制約で前方秘匿性はありません。")
+    my_name, room_name, room_password = prompt_room_info()
 
     # 再接続しても同じ人物として戻れるよう、IDは最初に1回だけ作る
     absolute_id = generate_absolute_id()
@@ -388,7 +420,7 @@ def start():
         sys.exit()
 
 
-async def instant_generate(msg, my_name, full_id, room_name, websocket):
+async def instant_generate(msg, my_name, full_id, room_name, transport):
     try:
         parts = msg.split()
         # factor は省略可 (省略時は 0.55)
@@ -428,7 +460,7 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
             pixels = resized_gray.flatten().astype(int)
             result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
             print(f"\r{result}")
-            await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, websocket, msg)
+            await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, transport, msg)
 
         elif color == "color":
             resized_rgb = cv2.resize(rgb, (size, height))
@@ -437,14 +469,14 @@ async def instant_generate(msg, my_name, full_id, room_name, websocket):
             pixels_gray = resized_gray.flatten().astype(int)
             result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
             print(f"\r{result}")
-            await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, websocket, msg)
+            await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, transport, msg)
         else:
             print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
     except Exception as e:
         print(f"\r[System]エラー: {e}")
 
 
-async def uploaded(content, display_name, room_name, full_id, websocket, msg):
+async def uploaded(content, display_name, room_name, full_id, transport, msg):
     global save
     list_msg = [msg,
                 "-----------------------------",
@@ -460,7 +492,7 @@ async def uploaded(content, display_name, room_name, full_id, websocket, msg):
         }
         if i != 0:
             print(f"\r{full_id}: {list_msg[i]}")
-        await websocket.send(json.dumps(payload))
+        await transport.send(payload)
         await asyncio.sleep(0.1)
 
     sync_payload = {
@@ -468,7 +500,7 @@ async def uploaded(content, display_name, room_name, full_id, websocket, msg):
         "id": full_id,
         "message": f"/opsyncsave\n{content}"
     }
-    await websocket.send(json.dumps(sync_payload))
+    await transport.send(sync_payload)
     save = content
 
 
