@@ -22,7 +22,7 @@ import chat_functions
 import chat_transport
 
 # BLE のコントローラが Peripheral として同時に受けられる Central は、macOS や
-# 一般的なアダプタで4〜7台程度。超えると黙って不安定になるので、明示的に断る。
+# 一般的なアダプタで4〜7台程度。超えると不安定になるので、明示的に断る。
 MAX_GUESTS = 4
 
 SCAN_TIMEOUT = 15.0       # 部屋を探す時間
@@ -32,6 +32,7 @@ ACK_TIMEOUT = 2.0         # 通知の到達確認を待つ時間
 CHUNK_GAP = 0.015         # 通知を連投するときの間隔
 PING_INTERVAL = 10.0      # ゲストが生存を知らせる間隔
 SESSION_TIMEOUT = 30.0    # これだけ無音ならゲストが落ちたとみなす
+LONG_SEND_CHUNKS = 100    # これ以上に分割されるときは送信中であることを出す
 
 
 class RoomNotFound(Exception):
@@ -74,9 +75,11 @@ class _BleTransportBase(chat_transport.ChatTransport):
     """ホストとゲストで共通の部分。"""
 
     display_name = "BLE"
-    supports_files = False        # 帯域が狭いのでファイル転送は載せていない
-    supports_generate = False
-    supports_user_lookup = True   # 短いテキストの往復だけなのでBLEでも使える
+    # ファイルや ASCII ART は ble_link が圧縮と分割をして運ぶ。
+    # 帯域が狭いので、大きいものは送り終わるまで時間がかかる。
+    supports_files = True         # /file /show /download
+    supports_generate = True      # /generate
+    supports_user_lookup = True   # /user
 
     def __init__(self, secret, room_id, full_id):
         self._secret = secret
@@ -141,8 +144,8 @@ class _BleTransportBase(chat_transport.ChatTransport):
         }))
 
     def _on_drop(self, src, why):
-        print(f"\r[System]メッセージを受け取れませんでした: {why}")
-        print(f"{self._full_id}: ", end="", flush=True)
+        chat_functions.show_incoming(
+            f"[System]メッセージを受け取れませんでした: {why}", self._full_id)
 
     async def _cancel_tasks(self):
         for t in self._tasks:
@@ -241,6 +244,11 @@ class BleHostTransport(_BleTransportBase):
             ids = ble_link.peek(chunk)
             if ids is None or ids[0] in self._blocked:
                 continue
+            # 大きいメッセージは組み上がるまで時間がかかるので、チャンクが
+            # 届いている間は生きているとみなす。でないと送信中に切断扱いになる。
+            session = self._sessions.get(ids[0])
+            if session is not None:
+                session["last"] = time.monotonic()
             body = self._reasm.feed(chunk)
             if body is None:
                 continue
@@ -254,7 +262,7 @@ class BleHostTransport(_BleTransportBase):
             except chat_transport.TransportClosed:
                 break
             except Exception as e:
-                print(f"\r[System]エラー: {e}")
+                chat_functions.show_incoming(f"[System]エラー: {e}", self._full_id)
 
     async def _handle(self, frame, body):
         kind = frame.get("t")
@@ -346,7 +354,7 @@ class BleHostTransport(_BleTransportBase):
             except chat_transport.TransportClosed:
                 break
             except Exception as e:
-                print(f"\r[System]エラー: {e}")
+                chat_functions.show_incoming(f"[System]エラー: {e}", self._full_id)
             finally:
                 if done is not None:
                     done.set()
@@ -366,7 +374,7 @@ class BleHostTransport(_BleTransportBase):
                 chunks = ble_link.pack(body, ble_link.HOST_SRC, msg_id, payload)
             except ValueError as e:
                 self._acks.pop(msg_id, None)
-                print(f"\r[System]エラー: {e}")
+                chat_functions.show_incoming(f"[System]エラー: {e}", self._full_id)
                 return
             try:
                 for chunk in chunks:
@@ -376,8 +384,7 @@ class BleHostTransport(_BleTransportBase):
                     return
             finally:
                 self._acks.pop(msg_id, None)
-        print(f"\r[System]送信できませんでした")
-        print(f"{self._full_id}: ", end="", flush=True)
+        chat_functions.show_incoming("[System]送信できませんでした", self._full_id)
 
     async def _wait_acks(self, msg_id, waiting):
         deadline = time.monotonic() + ACK_TIMEOUT
@@ -452,8 +459,9 @@ class BleGuestTransport(_BleTransportBase):
         self._client = None
         self._src = secrets.randbits(16) or 1  # 0 はホストが使う
         self._write_size = 20
-        # 1つのメッセージのチャンクが他のメッセージと混ざらないようにする。
-        # ホスト側は送信タスクが1本だけなので、こちらにだけ必要。
+        # 書き込みを1件ずつに揃える。ホスト側は送信タスクが1本だけなので、
+        # こちらにだけ必要。チャンク単位で取るので、大きいメッセージの送信中にも
+        # ack や ping が割り込める (組み直しは msg_id ごとなので混ざっても良い)。
         self._send_lock = asyncio.Lock()
         # _settled は「ホストが返事をした」、_authed は「通った」。分けておかないと
         # 満員で断られた場合と返事が無い場合を区別できない。
@@ -555,21 +563,25 @@ class BleGuestTransport(_BleTransportBase):
             raise chat_transport.TransportClosed
         body = self._seal(frame)
         payload = max(ble_link.MIN_CHUNK_PAYLOAD, self._write_size - ble_link.HDR_LEN)
-        async with self._send_lock:
-            msg_id = self._next_msg_id()
+        msg_id = self._next_msg_id()
+        try:
+            chunks = ble_link.pack(body, self._src, msg_id, payload)
+        except ValueError as e:
+            print(f"\r[System]エラー: {e}")
+            return
+        if len(chunks) >= LONG_SEND_CHUNKS:
+            print(f"\r[System]送信中です ({len(chunks)}分割)...")
+        for chunk in chunks:
+            if self._closed:
+                raise chat_transport.TransportClosed
             try:
-                chunks = ble_link.pack(body, self._src, msg_id, payload)
-            except ValueError as e:
-                print(f"\r[System]エラー: {e}")
-                return
-            for chunk in chunks:
-                try:
+                async with self._send_lock:
                     # response=True にすると ATT が1件ずつ応答を返すので、
                     # 送信キューが溢れてチャンクが黙って消えることがない。
                     await self._client.write_gatt_char(
                         ble_link.RX_CHAR_UUID, chunk, response=True)
-                except Exception:
-                    raise chat_transport.TransportClosed from None
+            except Exception:
+                raise chat_transport.TransportClosed from None
 
     async def _ping_loop(self):
         while not self._closed:
@@ -685,7 +697,7 @@ async def main():
         print("エラー: make、join、又はleaveを入力してください")
 
     if mode == "leave":
-        print("\r[System]退出しました")
+        print(f"\r[System]退出しました")
         return
 
     # 再接続しても同じ人物として戻れるよう、IDは最初に1回だけ作る
@@ -709,7 +721,7 @@ async def main():
             return
         except Exception as e:
             if not connected_before:
-                print(f"\r[System]エラー: {e}")
+                chat_functions.show_incoming(f"[System]エラー: {e}", self._full_id)
                 print(f"\r中止")
                 return
 

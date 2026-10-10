@@ -91,16 +91,22 @@ def unseal(body, secret):
 #  verflags uint8   上位4bit = バージョン、bit0 = zlib 圧縮
 #  src      uint16  送信者タグ
 #  msg_id   uint8   送信者ごとの連番 (256 で一周)
-#  idx      uint8   チャンク番号
-#  total    uint8   総チャンク数
+#  idx      uint16  チャンク番号
+#  total    uint16  総チャンク数
 #  crc      uint16  本文全体の CRC32 の下位16bit
-HDR = struct.Struct("<BHBBBH")
-HDR_LEN = HDR.size  # 8
+#
+# ファイルや ASCII ART を送れるよう、バージョン2でチャンク番号を uint16 に
+# 広げた。バージョン1の端末とは verflags の段階で互いに読み捨てる。
+HDR = struct.Struct("<BHBHHH")
+HDR_LEN = HDR.size  # 10
 
-VERSION = 1
+VERSION = 2
 FLAG_COMPRESSED = 0x01
 
-MAX_CHUNKS = 255
+# 1メッセージあたりの上限。MTU が既定 (12バイト/チャンク) でも圧縮後で約48KB。
+# 組み直しのためにメモリへ溜めるので、際限なくは受けない。
+MAX_CHUNKS = 4096
+MAX_DECOMPRESSED = 4 * 1024 * 1024  # 展開後の上限
 MIN_CHUNK_PAYLOAD = 12  # MTU が既定の20バイトのときの実データ量
 
 
@@ -112,12 +118,19 @@ def pack(body, src, msg_id, chunk_payload):
     if chunk_payload < 1:
         raise ValueError("chunk_payload が小さすぎます")
 
+    verflags = VERSION << 4
+    # ASCII ART (特にカラーのエスケープシーケンス) はよく縮むので、
+    # 小さくなる場合だけ圧縮する。CRC は圧縮後の本文に対して取る。
+    packed = zlib.compress(body, 9)
+    if len(packed) < len(body):
+        body = packed
+        verflags |= FLAG_COMPRESSED
+
     crc = zlib.crc32(body) & 0xFFFF
     total = max(1, -(-len(body) // chunk_payload))
     if total > MAX_CHUNKS:
         raise ValueError("メッセージが長すぎます")
 
-    verflags = VERSION << 4
     out = []
     for idx in range(total):
         piece = body[idx * chunk_payload:(idx + 1) * chunk_payload]
@@ -168,7 +181,7 @@ class Reassembler:
         verflags, src, msg_id, idx, total, crc = HDR.unpack_from(chunk)
         if verflags >> 4 != VERSION:
             return None
-        if total == 0 or idx >= total:
+        if total == 0 or total > MAX_CHUNKS or idx >= total:
             return None
 
         key = (src, msg_id)
@@ -196,11 +209,14 @@ class Reassembler:
                 self._on_drop(src, "内容が壊れていました")
             return None
         if verflags & FLAG_COMPRESSED:
-            # 現状の送信側は圧縮しないが、将来ファイル転送で有効にしたときに
-            # 今のクライアントが読めるよう、展開だけ先に用意しておく。
+            # HMAC の検証は展開した後なので、パスワードを知らない相手からも
+            # 届きうる。極端に膨らむデータでメモリを食われないよう上限を設ける。
+            d = zlib.decompressobj()
             try:
-                body = zlib.decompress(body)
+                body = d.decompress(body, MAX_DECOMPRESSED)
             except zlib.error:
+                body = None
+            if body is None or d.unconsumed_tail or not d.eof:
                 if self._on_drop:
                     self._on_drop(src, "展開に失敗しました")
                 return None

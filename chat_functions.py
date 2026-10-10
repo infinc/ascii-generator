@@ -14,8 +14,46 @@ import os
 import cv2
 import math
 
+# input() は readline を読み込んでおくと行編集に対応し、入力途中の文字列を
+# get_line_buffer() で取り出せる。Windows には無いので、その場合は取り出せない。
+try:
+    import readline
+except ImportError:
+    readline = None
+
 save = None
 disconnected = False
+
+
+# input() が readline を使うのは、入出力が端末 (tty) のときだけ。PyCharm の
+# 通常の実行コンソールは端末ではないので、打ちかけの文字を取り出せず、
+# \r や \x1b[K も効かない。その場合は描き直しをせずに出すだけにする。
+INTERACTIVE = readline is not None and sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def show_incoming(text, full_id):
+    """入力待ちの途中で届いた表示を、打ちかけの文字を残したまま出す。
+
+    受信は input() を待っている最中に起きる。そのまま print すると、プロンプトと
+    入力途中の文字が上書きされて見えなくなるため、行を消して本文を出したあと、
+    プロンプトと入力途中の文字を描き直す。
+    """
+    if not INTERACTIVE:
+        # 打ちかけの文字は消せないので、それとは別の行に出す。
+        # プロンプトを出し直すと、打ちかけの文字が消えたように見えるので出さない。
+        print(f"\n{text}", flush=True)
+        return
+    typed = readline.get_line_buffer()
+    print(f"\r\x1b[K{text}")  # 行末まで消す。上書きの残りを防ぐ
+    print(f"{full_id}: {typed}", end="", flush=True)
+
+
+def warn_if_not_terminal():
+    """端末でないと受信時の表示が崩れるので、直し方を案内する。"""
+    if INTERACTIVE:
+        return
+    print("[System]注意: 端末ではない画面で実行されているため、入力中にメッセージが届くと表示が乱れます。")
+    print("[System]PyCharm では、実行構成の「Modify options」→「Emulate terminal in output console」を有効にしてください。")
 
 # コマンドと、それを使うために通信路が備えている必要がある機能の対応。
 _CAP_FOR_CMD = {
@@ -71,8 +109,7 @@ async def receive_messages(transport, my_name, full_id, room_name, absolute_id):
                 elif msg.startswith("/opfounduser "):
                     requester = msg.split(" ", 1)[1].strip()
                     if full_id == requester:
-                        print(f"\r[System]{sender} は現在オンラインです")
-                        print(f"{full_id}: ", end="", flush=True)
+                        show_incoming(f"[System]{sender} は現在オンラインです", full_id)
                     continue
                 elif msg.startswith("/opsyncsave\n"):
                     save = msg.split("\n", 1)[1]
@@ -83,12 +120,10 @@ async def receive_messages(transport, my_name, full_id, room_name, absolute_id):
                     if target_user in (my_name, absolute_id, full_id):
                         content = parts[1] if len(parts) > 1 else ""
                         save = content
-                        print(f"\r[{sender} (最新のファイル)]:\n{content}")
-                        print(f"{full_id}: ", end="", flush=True)
+                        show_incoming(f"[{sender} (最新のファイル)]:\n{content}", full_id)
 
                     continue
-                print(f"\r{sender}: {msg}")
-                print(f"{full_id}: ", end="", flush=True)
+                show_incoming(f"{sender}: {msg}", full_id)
 
                 if (msg.strip() == "/show" and sender != full_id
                         and save is not None and transport.supports_files):
@@ -124,13 +159,12 @@ async def send_messages(transport, my_name, full_id, room_name, absolute_id):
         if not msg.strip():
             continue
 
-        # 通信方式によって使えないコマンドをここで弾く。BLE は帯域が狭く
-        # ファイル転送に対応していないので、黙って失敗させずに理由を出す。
+        # 通信方式によって使えないコマンドをここで弾く。
+        # 黙って失敗させずに理由を出す。
         cmd = msg.strip().split(" ", 1)[0] if msg.strip().startswith("/") else ""
         cap = _CAP_FOR_CMD.get(cmd)
         if cap and not getattr(transport, cap):
             print(f"\r[System]{cmd} は{transport.display_name}では未対応です")
-            print(f"{full_id}: ", end="", flush=True)
             continue
 
         try:
@@ -229,12 +263,10 @@ async def send_messages(transport, my_name, full_id, room_name, absolute_id):
                 target_user = msg[6:].strip()
                 if not target_user:
                     print(f"\r[System]コマンド: /user <user_nameid>")
-                    print(f"{full_id}: ", end="", flush=True)
                     continue
 
                 if target_user in (my_name, absolute_id, full_id):
                     print(f"\r[System]指定した人は自分自身です。")
-                    print(f"{full_id}: ", end="", flush=True)
                     continue
 
                 print(f"\r[System]{target_user} を検索しています...")
@@ -246,7 +278,6 @@ async def send_messages(transport, my_name, full_id, room_name, absolute_id):
                 }
                 await transport.send(payload)
 
-                print(f"{full_id}: ", end="", flush=True)
                 continue
 
             elif msg.strip() == "/show":
@@ -364,6 +395,7 @@ async def connect_and_run(my_name, room_name, room_password, absolute_id, rejoin
 
 def prompt_room_info():
     """ユーザー名・部屋ID・パスワードを聞く。Achex と BLE で共通。"""
+    warn_if_not_terminal()
     my_name = input("使用するユーザーネームを入力: ")
     room_name = input("参加する部屋のIDを入力: ")
     print("パスワードは入力しなくてもデフォルトでpasswordになります。")
