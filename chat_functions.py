@@ -43,9 +43,13 @@ def show_incoming(text, full_id):
         # プロンプトを出し直すと、打ちかけの文字が消えたように見えるので出さない。
         print(f"\n{text}", flush=True)
         return
-    typed = readline.get_line_buffer()
-    print(f"\r\x1b[K{text}")  # 行末まで消す。上書きの残りを防ぐ
-    print(f"{full_id}: {typed}", end="", flush=True)
+    print(f"\r\x1b[K{text}", flush=True)  # 行末まで消す。上書きの残りを防ぐ
+    # プロンプトと打ちかけの文字は readline 自身に描き直させる。自前で
+    # get_line_buffer() を使うと、macOS の libedit は Enter の後も次のキー入力
+    # までは送信済みの行を返すので、送ったはずの文字が入力欄に残って見える。
+    # また readline はカーソル位置を自分で覚えているので、自前で描くと
+    # 次のキー入力で行が崩れる。
+    readline.redisplay()
 
 
 def warn_if_not_terminal():
