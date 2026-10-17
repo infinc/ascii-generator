@@ -19,6 +19,7 @@ def user_choice():
     print("3: gif画像から白黒のASCII ARTに変換し再生します")
     print("4: ASCII ARTをpng画像に変換します")
     print("5: Achexを使用してチャットします")
+    print("6: BLEを使用してチャットします(インターネット不要)")
     try:
         choice = int(input("選択: "))
         return choice
@@ -344,14 +345,18 @@ def ascii_to_image(path, chars):
     print("この画像の比率は(横:縦)" + str(new_width) + ": " + str(restored_height))
 
 
-def command_list():
+def command_list(caps=None):
+    # caps は chat_transport.ChatTransport。渡された場合は、その通信路で
+    # 実際に使えるコマンドだけを出す。省略時は全部出す。
     print(f"\r[Helper]コマンドリスト")
     print(f"\r/cmd ... 全てのコマンドを表示します")
     print(f"\r/help ... ヘルプを表示します")
-    print(f"\r/file <file> ... ファイルを送信します(テキストベースのファイルのみ)")
-    print(f"\r/show ... 最新のファイルの中身を表示します")
-    print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
-    print(f"\r/generate <path> <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(factor省略時=0.55)")
+    if caps is None or caps.supports_files:
+        print(f"\r/file <file> ... ファイルを送信します(テキストベースのファイルのみ)")
+        print(f"\r/show ... 最新のファイルの中身を表示します")
+        print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
+    if caps is None or caps.supports_generate:
+        print(f"\r/generate <path> <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(factor省略時=0.55)")
     print(f"\r/clear ... 画面を綺麗にします")
     print(f"\r/exit ... 会話を終了します")
 

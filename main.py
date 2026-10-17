@@ -1,6 +1,7 @@
 import argparse
 import math
 import mimetypes
+import ble_chat
 import chat_functions
 import functions
 from functions import cv2
@@ -166,7 +167,10 @@ else:
         case 5:
             chat_functions.start()
 
+        case 6:
+            ble_chat.start()
+
         case _:
-            print("エラー: 1、2、3、4、又は5を選んでください")
+            print("エラー: 1、2、3、4、5、又は6を選んでください")
             print("中止")
             sys.exit()
