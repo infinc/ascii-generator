@@ -13,43 +13,210 @@ import hashlib
 import os
 import cv2
 import math
+import codecs
+import select
+import shutil
+import threading
+import unicodedata
 
-# input() は readline を読み込んでおくと行編集に対応し、入力途中の文字列を
-# get_line_buffer() で取り出せる。Windows には無いので、その場合は取り出せない。
+# input() は readline を読み込んでおくと行編集 (矢印キーなど) に対応する。
+# チャット中の入力欄だけは下の LineEditor を使う。
 try:
-    import readline
+    import readline  # noqa: F401
 except ImportError:
     readline = None
+
+# 端末を1文字ずつ読むのに使う。Windows には無い。
+try:
+    import termios
+except ImportError:
+    termios = None
 
 save = None
 disconnected = False
 
 
-# input() が readline を使うのは、入出力が端末 (tty) のときだけ。PyCharm の
-# 通常の実行コンソールは端末ではないので、打ちかけの文字を取り出せず、
-# \r や \x1b[K も効かない。その場合は描き直しをせずに出すだけにする。
-INTERACTIVE = readline is not None and sys.stdin.isatty() and sys.stdout.isatty()
+# 入出力が端末 (tty) のときだけ、入力欄を描き直しながら受信を表示できる。
+# PyCharm の通常の実行コンソールは端末ではないので \r や \x1b[K が効かない。
+# その場合は描き直しをせずに出すだけにする。
+INTERACTIVE = termios is not None and sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def show_incoming(text, full_id):
+def _display_width(s):
+    """端末上での幅。全角は2、結合文字は0として数える。"""
+    w = 0
+    for c in s:
+        if unicodedata.combining(c):
+            continue
+        w += 2 if unicodedata.east_asian_width(c) in "WF" else 1
+    return w
+
+
+class LineEditor:
+    """チャットの入力欄。input() の代わりに1文字ずつ読んで自分で描く。
+
+    input() (readline) は別スレッドで待たせているので、受信を表示するときに
+    入力欄を描き直す手段が無い。macOS の libedit は get_line_buffer() が
+    Enter の後も前の行を返し続け、redisplay() も次のキー入力まで何も描かない。
+    そのため入力欄が消えたり、プロンプトが2つ出たりしていた。入力中の文字と
+    画面の状態をここで持っておけば、いつでも正しく描き直せる。
+
+    できる編集は文字の追加、Backspace、Ctrl-U (全消去)、Ctrl-W (1語消去) だけ。
+    矢印キーなどのエスケープシーケンスは読み捨てる。
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._prompt = None   # 入力待ちでないときは None
+        self._buf = []
+        self._rows = 0        # 入力欄の描画で使っている行数 - 1 (カーソルの行)
+        self._cancel = threading.Event()
+
+    # --- 描画 (必ず _lock を取ってから呼ぶ) ---
+
+    def _erase(self):
+        """入力欄を消して、カーソルを入力欄の先頭に戻す。"""
+        if self._rows:
+            sys.stdout.write(f"\x1b[{self._rows}A")
+        sys.stdout.write("\r\x1b[J")
+        self._rows = 0
+
+    def _draw(self):
+        line = self._prompt + "".join(self._buf)
+        sys.stdout.write(line)
+        cols = shutil.get_terminal_size().columns or 80
+        w = _display_width(line)
+        # 行末ちょうどで止まったときは、多くの端末で次の文字まで折り返さない
+        self._rows = max(0, (w - 1) // cols) if w else 0
+
+    def print_above(self, text):
+        """入力欄の上に text を出し、入力欄を描き直す。"""
+        with self._lock:
+            if self._prompt is None:
+                sys.stdout.write(f"\r\x1b[K{text}\n")
+            else:
+                self._erase()
+                sys.stdout.write(f"{text}\n")
+                self._draw()
+            sys.stdout.flush()
+
+    # --- 入力 ---
+
+    def cancel(self):
+        """読み込み中のスレッドを終わらせる。Ctrl-C で抜けるときに使う。"""
+        self._cancel.set()
+
+    def read_line(self, prompt):
+        """1行読む。別スレッドで呼ぶ。input() と同じく EOF で EOFError。"""
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        new = termios.tcgetattr(fd)
+        # 行単位のバッファとエコーを切る。ISIG は残すので Ctrl-C は効く。
+        new[3] &= ~(termios.ICANON | termios.ECHO)
+        new[6][termios.VMIN] = 1
+        new[6][termios.VTIME] = 0
+        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        esc = None  # エスケープシーケンスを読み捨て中なら、そこまでの文字列
+
+        self._cancel.clear()
+        with self._lock:
+            self._prompt = prompt
+            self._buf = []
+            self._draw()
+            sys.stdout.flush()
+        termios.tcsetattr(fd, termios.TCSADRAIN, new)
+        try:
+            while True:
+                # 定期的に起きて、cancel() されていないか確かめる
+                r, _, _ = select.select([fd], [], [], 0.1)
+                if self._cancel.is_set():
+                    raise EOFError
+                if not r:
+                    continue
+                data = os.read(fd, 1024)
+                if not data:
+                    raise EOFError
+                for c in decoder.decode(data):
+                    if esc is not None:
+                        esc += c
+                        # ESC [ ... 終端文字 / ESC O x / ESC x のどれかで終わる
+                        if len(esc) == 2 and c not in "[O":
+                            esc = None
+                        elif len(esc) >= 3 and (esc[1] == "O" or "@" <= c <= "~"):
+                            esc = None
+                        continue
+                    with self._lock:
+                        if c in "\r\n":
+                            line = "".join(self._buf)
+                            sys.stdout.write("\n")
+                            sys.stdout.flush()
+                            self._prompt = None
+                            self._rows = 0
+                            return line
+                        if c == "\x1b":
+                            esc = c
+                            continue
+                        if c == "\x04":           # Ctrl-D
+                            if not self._buf:
+                                raise EOFError
+                            continue
+                        if c in "\x7f\x08":        # Backspace
+                            if not self._buf:
+                                continue
+                            self._buf.pop()
+                        elif c == "\x15":          # Ctrl-U
+                            self._buf = []
+                        elif c == "\x17":          # Ctrl-W
+                            while self._buf and self._buf[-1] == " ":
+                                self._buf.pop()
+                            while self._buf and self._buf[-1] != " ":
+                                self._buf.pop()
+                        elif c == "\t":
+                            self._buf.append(" ")
+                        elif c < " ":
+                            continue               # その他の制御文字は無視
+                        else:
+                            self._buf.append(c)
+                        self._erase()
+                        self._draw()
+                        sys.stdout.flush()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            with self._lock:
+                self._prompt = None
+                self._rows = 0
+
+
+_editor = LineEditor() if INTERACTIVE else None
+
+
+async def read_chat_line(prompt):
+    """チャットの入力欄から1行読む。端末でなければ input() を使う。"""
+    loop = asyncio.get_running_loop()
+    if _editor is None:
+        return await loop.run_in_executor(None, input, prompt)
+    try:
+        return await loop.run_in_executor(None, _editor.read_line, prompt)
+    except asyncio.CancelledError:
+        # スレッドは待たせたままだと終了時に join で止まり、端末の設定も
+        # 戻らないので、ここで抜けさせる。
+        _editor.cancel()
+        raise
+
+
+def show_incoming(text, full_id=None):
     """入力待ちの途中で届いた表示を、打ちかけの文字を残したまま出す。
 
-    受信は input() を待っている最中に起きる。そのまま print すると、プロンプトと
-    入力途中の文字が上書きされて見えなくなるため、行を消して本文を出したあと、
-    プロンプトと入力途中の文字を描き直す。
+    受信は入力を待っている最中に起きる。そのまま print すると、プロンプトと
+    入力途中の文字が上書きされて見えなくなるため、入力欄を消して本文を出したあと、
+    入力欄を描き直す。full_id は以前の呼び出し方との互換のために残している。
     """
-    if not INTERACTIVE:
+    if _editor is None:
         # 打ちかけの文字は消せないので、それとは別の行に出す。
         # プロンプトを出し直すと、打ちかけの文字が消えたように見えるので出さない。
         print(f"\n{text}", flush=True)
         return
-    print(f"\r\x1b[K{text}", flush=True)  # 行末まで消す。上書きの残りを防ぐ
-    # プロンプトと打ちかけの文字は readline 自身に描き直させる。自前で
-    # get_line_buffer() を使うと、macOS の libedit は Enter の後も次のキー入力
-    # までは送信済みの行を返すので、送ったはずの文字が入力欄に残って見える。
-    # また readline はカーソル位置を自分で覚えているので、自前で描くと
-    # 次のキー入力で行が崩れる。
-    readline.redisplay()
+    _editor.print_above(text)
 
 
 def warn_if_not_terminal():
@@ -81,8 +248,8 @@ def notify_disconnected():
     if disconnected:
         return
     disconnected = True
-    print("\r[System]接続が切れました")
-    print("\r[System]続けるにはconnect と入力して再接続してください")
+    show_incoming("[System]接続が切れました")
+    show_incoming("[System]続けるにはconnect と入力して再接続してください")
 
 
 async def receive_messages(transport, my_name, full_id, room_name, absolute_id):
@@ -147,10 +314,9 @@ async def receive_messages(transport, my_name, full_id, room_name, absolute_id):
 
 async def send_messages(transport, my_name, full_id, room_name, absolute_id):
     global save
-    loop = asyncio.get_running_loop()
 
     while True:
-        msg = await loop.run_in_executor(None, input, f"{full_id}: ")
+        msg = await read_chat_line(f"{full_id}: ")
 
         if disconnected:
             if msg.strip() == "connect":
