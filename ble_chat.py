@@ -475,9 +475,13 @@ class BleGuestTransport(_BleTransportBase):
         svc_uuid = ble_link.service_uuid(room_name, room_password).lower()
 
         print(f"\r[System]部屋を探しています...")
+        # service_uuids を必ず渡す。macOS 12.0〜12.2 (Monterey) の CoreBluetooth は
+        # サービスを指定しないスキャンでは広告を1件も返さない (bleak issue #720)。
+        # 指定しておけば OS 側で絞り込むので、他の OS でも無駄な広告を受けずに済む。
         device = await ble.BleakScanner.find_device_by_filter(
             lambda d, adv: svc_uuid in [u.lower() for u in (adv.service_uuids or [])],
             timeout=SCAN_TIMEOUT,
+            service_uuids=[svc_uuid],
         )
         if device is None:
             raise RoomNotFound
@@ -721,7 +725,7 @@ async def main():
             return
         except Exception as e:
             if not connected_before:
-                chat_functions.show_incoming(f"[System]エラー: {e}", self._full_id)
+                print(f"\r[System]エラー: {e}")
                 print(f"\r中止")
                 return
 
