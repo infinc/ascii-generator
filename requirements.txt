@@ -1,7 +1,7 @@
-numpy==2.5.1
-opencv_python==4.13.0.92
-websockets==16.1
-pillow_heif==1.5.0
-certifi==2026.7.22
-bleak==2.0.0
+numpy==2.5.4
+opencv_python==5.0.0.93
+websockets==17.2
+pillow_heif==1.8.1
+certifi==2026.10.23
+bleak==3.0.2
 bless==0.3.0

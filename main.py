@@ -10,7 +10,7 @@ from functions import sys
 
 def parse_cli_args(argv):
     parser = argparse.ArgumentParser(prog="main.py")
-    parser.add_argument("path", nargs="?", default=None, help="変換する画像のパス(省略するとFinderから選択)")
+    parser.add_argument("path", nargs="?", default=None, help="変換する画像のパス(省略するとFinderまたはexplorerから選択)")
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--color", action="store_true", help="カラーASCII ARTを生成")
     mode_group.add_argument("--gray", action="store_true", help="白黒ASCII ARTを生成")

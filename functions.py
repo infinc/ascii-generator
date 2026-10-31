@@ -73,7 +73,7 @@ def choose_file_gui(extension=None):
     extension を省略すると、種類を絞らずに全てのファイルを選べる。"""
     exts = [e.lstrip(".") for e in extension.split()] if extension else []
 
-    # macOS は osascript で Finder のダイアログを出す。tkinter が無い Python でも動く。
+    # macOS は osascript でダイアログを出す。tkinter が無い Python でも動く。
     if sys.platform == "darwin":
         of_type = f' of type {{{", ".join(f'"{e}"' for e in exts)}}}' if exts else ""
         script = (
@@ -100,7 +100,7 @@ def choose_file_gui(extension=None):
 def gain_path(extension, sample):
     print("例) cat.jpeg")
     print(f"対応している拡張子: {extension}")
-    print("何も入力せずEnterを押すと、Finderからファイルを選択できます")
+    print("何も入力せずEnterを押すと、Finderまたはexplorerからファイルを選択できます")
     if sample != "":
         print("サンプルを使用するには、sと入力してください")
     path = input("パス(変換したい画像): ").strip()
@@ -390,11 +390,11 @@ def command_list(caps=None):
     print(f"\r/cmd ... 全てのコマンドを表示します")
     print(f"\r/help ... ヘルプを表示します")
     if caps is None or caps.supports_files:
-        print(f"\r/file [file] ... ファイルを送信します(テキストベースのファイルのみ、file省略時=Finderから選択)")
+        print(f"\r/file [file] ... ファイルを送信します(テキストベースのファイルのみ、file省略時=Finderまたはexplorerから選択)")
         print(f"\r/show ... 最新のファイルの中身を表示します")
         print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
     if caps is None or caps.supports_generate:
-        print(f"\r/generate [path] <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(path省略時=Finderから選択、factor省略時=0.55)")
+        print(f"\r/generate [path] <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(path省略時=Finderまたはexplolerから選択、factor省略時=0.55)")
     print(f"\r/clear ... 画面を綺麗にします")
     print(f"\r/exit ... 会話を終了します")
 

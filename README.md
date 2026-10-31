@@ -263,10 +263,10 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 | --- | --- |
 | `/cmd` | 全てのコマンドを表示します |
 | `/help` | ヘルプを表示します |
-| `/file [file]` | ファイルを送信します（テキストベースのファイルのみ。file を省略すると Finder から選択） |
+| `/file [file]` | ファイルを送信します（テキストベースのファイルのみ。file を省略すると Finderまたはexplorerから選択） |
 | `/show` | 最新のファイルの中身を表示します |
 | `/download <raw または png>` | 最新のファイルを .txt または .png として保存します |
-| `/generate [path] <gray または color> <width> [factor]` | すぐに ASCII ART を生成します（path を省略すると Finder から選択） |
+| `/generate [path] <gray または color> <width> [factor]` | すぐに ASCII ART を生成します（path を省略すると Finderまたはexplorerから選択） |
 | `/clear` | 画面の表示を消して綺麗にします（自分の画面のみ） |
 | `/user <名前>` | 指定したユーザーがオンラインか確認します |
 | `/exit` | チャットから退出します |
@@ -322,8 +322,8 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 
 | | Python版 | Web版 |
 |---|---|---|
-| `/generate` | `/generate [path] <[gray/color]> <width> [factor]` (path 省略時は Finder から選択) | `/generate <[gray/color]> <width> [factor]` (path を廃止) |
-| `/file` | `/file [path]` (path 省略時は Finder から選択) | `/file` (引数なし) |
+| `/generate` | `/generate [path] <[gray/color]> <width> [factor]` (path 省略時は Finderまたはexplorerから選択) | `/generate <[gray/color]> <width> [factor]` (path を廃止) |
+| `/file` | `/file [path]` (path 省略時は Finderまたはexplorerから選択) | `/file` (引数なし) |
 
 画像とテキストファイルは、**画面にドラッグ&ドロップ**しておくか、コマンド実行時に開くファイル選択ダイアログから指定します。`/download` はブラウザのダウンロードとして保存されます。
 
@@ -358,12 +358,12 @@ npm run deploy
 ---
 
 ## 必要モジュール (`requirements.txt`)
-- `numpy v2.5.1` <span style="color: gray;">(数値計算を素早く行うために使用します[BSD-3-Clause])</span>
-- `opencv-python v4.13.0.92` <span style="color: gray;">(画像や動画の処理、解析に使用します[Apache-2.0])</span>
-- `websockets v16.1` <span style="color: gray;">(チャットするために使用します[BSD-3-Clause])</span>
-- `pillow_heif v1.5.0` <span style="color: gray;">(HEICの読み込みに使用します[BSD-3-Clause])</span>
-- `certifi v2026.7.22` <span style="color: gray;">(TLS証明書の検証に使用します[Mozilla Public License 2.0])</span>
-- `bleak v2.0.0` <span style="color: gray;">(メニュー6のBLEチャットで、部屋を探して接続する側に使用します[MIT])</span>
+- `numpy v2.5.4` <span style="color: gray;">(数値計算を素早く行うために使用します[BSD-3-Clause])</span>
+- `opencv-python v5.0.0.93` <span style="color: gray;">(画像や動画の処理、解析に使用します[Apache-2.0])</span>
+- `websockets v17.2` <span style="color: gray;">(チャットするために使用します[BSD-3-Clause])</span>
+- `pillow_heif v1.8.1` <span style="color: gray;">(HEICの読み込みに使用します[BSD-3-Clause])</span>
+- `certifi v2026.10.23` <span style="color: gray;">(TLS証明書の検証に使用します[Mozilla Public License 2.0])</span>
+- `bleak v3.0.2` <span style="color: gray;">(メニュー6のBLEチャットで、部屋を探して接続する側に使用します[MIT])</span>
 - `bless v0.3.0` <span style="color: gray;">(メニュー6のBLEチャットで、部屋を開いて待ち受ける側に使用します[MIT])</span>
 
 `bleak` は `2.x` 系に固定しています。`bless v0.3.0` は `bleak` のバックエンド内部に依存しており、`bleak 3.x` ではその内部構造が変わっているため動作が保証されません（`bless v0.3.0` は 2025-12-23 公開で、当時の `bleak` 最新は `2.0.0` でした）。
@@ -373,6 +373,8 @@ npm run deploy
 ```bash
 pip install -r requirements.txt
 ```
+
+**[20261031]重要: bless v0.3.0とPython3.15.2以降のバージョンは互換性がなくエラーが発生するため、BLEチャット(メニュー6番)を使用する場合はPython3.14.10(Python 3.14.7)までのバージョンを使用してください。**
 
 ---
 
