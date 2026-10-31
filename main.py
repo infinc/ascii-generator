@@ -10,7 +10,7 @@ from functions import sys
 
 def parse_cli_args(argv):
     parser = argparse.ArgumentParser(prog="main.py")
-    parser.add_argument("path", help="変換する画像のパス")
+    parser.add_argument("path", nargs="?", default=None, help="変換する画像のパス(省略するとFinderから選択)")
     mode_group = parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument("--color", action="store_true", help="カラーASCII ARTを生成")
     mode_group.add_argument("--gray", action="store_true", help="白黒ASCII ARTを生成")
@@ -22,6 +22,12 @@ def parse_cli_args(argv):
 
 def run_cli(argv):
     args = parse_cli_args(argv)
+
+    if args.path is None:
+        args.path = functions.choose_file_gui(".jpg .jpeg .png .webp .heic")
+        if args.path == "":
+            print("ファイルが選択されませんでした")
+            sys.exit(1)
 
     if not functions.is_image_path(args.path):
         print("エラー: 未対応のファイル、または拡張子の可能性があります。")

@@ -263,10 +263,10 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 | --- | --- |
 | `/cmd` | 全てのコマンドを表示します |
 | `/help` | ヘルプを表示します |
-| `/file <file>` | ファイルを送信します（テキストベースのファイルのみ） |
+| `/file [file]` | ファイルを送信します（テキストベースのファイルのみ。file を省略すると Finder から選択） |
 | `/show` | 最新のファイルの中身を表示します |
 | `/download <raw または png>` | 最新のファイルを .txt または .png として保存します |
-| `/generate <path> <gray または color> <width> [factor]` | すぐに ASCII ART を生成します |
+| `/generate [path] <gray または color> <width> [factor]` | すぐに ASCII ART を生成します（path を省略すると Finder から選択） |
 | `/clear` | 画面の表示を消して綺麗にします（自分の画面のみ） |
 | `/user <名前>` | 指定したユーザーがオンラインか確認します |
 | `/exit` | チャットから退出します |
@@ -322,8 +322,8 @@ path &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;変換する画像のパス (JPG,
 
 | | Python版 | Web版 |
 |---|---|---|
-| `/generate` | `/generate <path> <[gray/color]> <width> [factor]` | `/generate <[gray/color]> <width> [factor]` (path を廃止) |
-| `/file` | `/file <path>` | `/file` (引数なし) |
+| `/generate` | `/generate [path] <[gray/color]> <width> [factor]` (path 省略時は Finder から選択) | `/generate <[gray/color]> <width> [factor]` (path を廃止) |
+| `/file` | `/file [path]` (path 省略時は Finder から選択) | `/file` (引数なし) |
 
 画像とテキストファイルは、**画面にドラッグ&ドロップ**しておくか、コマンド実行時に開くファイル選択ダイアログから指定します。`/download` はブラウザのダウンロードとして保存されます。
 

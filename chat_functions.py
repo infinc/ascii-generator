@@ -191,7 +191,7 @@ async def send_messages(transport, my_name, full_id, room_name, absolute_id):
             elif msg.strip() == "/clear":
                 functions.clear_screen()
 
-            elif msg.startswith("/generate "):
+            elif msg.strip() == "/generate" or msg.startswith("/generate "):
                 await instant_generate(msg, my_name, full_id, room_name, transport)
 
             elif msg.startswith("/download "):
@@ -248,14 +248,23 @@ async def send_messages(transport, my_name, full_id, room_name, absolute_id):
                     print(f"\r[Helper]エラー: ダウンロードするファイルが存在しません")
                 continue
 
-            elif msg.startswith("/file "):
+            elif msg.strip() == "/file" or msg.startswith("/file "):
                 file = msg[6:].strip()
+                display_name = file
+                if not file:
+                    # 入力を待っている間も受信は続けたいので、ダイアログは別スレッドで開く
+                    file = await loop.run_in_executor(None, functions.choose_file_gui)
+                    if not file:
+                        print(f"\r[System]ファイルが選択されませんでした")
+                        continue
+                    # ダイアログは絶対パスを返すので、部屋にはファイル名だけを見せる
+                    display_name = os.path.basename(file)
 
                 if os.path.exists(file):
                     try:
                         with open(file, "r", encoding="utf-8") as f:
                             file_content = f.read()
-                        await uploaded(file_content, file, room_name, full_id, transport, msg)
+                        await uploaded(file_content, display_name, room_name, full_id, transport, msg)
 
                     except Exception as e:
                         print(f"\r[Helper]エラー: {e}")
@@ -459,15 +468,29 @@ def start():
 async def instant_generate(msg, my_name, full_id, room_name, transport):
     try:
         parts = msg.split()
+        usage = f"\r[System]コマンド: /generate [path] <[gray/color]> <width> [factor]"
+        # path を省略した場合 (2番目が gray/color) はダイアログで選ばせる
+        path_omitted = len(parts) >= 2 and parts[1] in ("gray", "color")
+        if path_omitted:
+            parts.insert(1, None)
         # factor は省略可 (省略時は 0.55)
         if len(parts) not in (4, 5):
-            print(f"\r[System]コマンド: /generate <path> <[gray/color]> <width> [factor]")
+            print(usage)
             return
 
         path = parts[1]
         color = parts[2]
         size = int(parts[3])
         correction_factor = float(parts[4]) if len(parts) == 5 else 0.55
+        display_name = path
+
+        if path_omitted:
+            loop = asyncio.get_running_loop()
+            path = await loop.run_in_executor(None, functions.choose_file_gui, ".jpg .jpeg .png .webp .heic")
+            if not path:
+                print(f"\r[System]ファイルが選択されませんでした")
+                return
+            display_name = os.path.basename(path)
 
         if not os.path.exists(path):
             print(f"\r[System]エラー: {path} は存在しません。")
@@ -496,7 +519,7 @@ async def instant_generate(msg, my_name, full_id, room_name, transport):
             pixels = resized_gray.flatten().astype(int)
             result = functions.gray_generator(functions.ASCII_CHARS_NORMAL, pixels, size)
             print(f"\r{result}")
-            await uploaded(result, f"{path} の白黒ASCII ART", room_name, full_id, transport, msg)
+            await uploaded(result, f"{display_name} の白黒ASCII ART", room_name, full_id, transport, msg)
 
         elif color == "color":
             resized_rgb = cv2.resize(rgb, (size, height))
@@ -505,7 +528,7 @@ async def instant_generate(msg, my_name, full_id, room_name, transport):
             pixels_gray = resized_gray.flatten().astype(int)
             result = functions.rgb_generator(functions.ASCII_CHARS_NORMAL, pixels_rgb, pixels_gray, size)
             print(f"\r{result}")
-            await uploaded(result, f"{path}のカラーASCII ART", room_name, full_id, transport, msg)
+            await uploaded(result, f"{display_name}のカラーASCII ART", room_name, full_id, transport, msg)
         else:
             print(f"\r[Helper]エラー: gray又はcolorを選択してください。")
     except Exception as e:

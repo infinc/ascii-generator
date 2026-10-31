@@ -24,7 +24,7 @@ import zlib
 
 # Central -> Peripheral。ゲストからホストへの送信に使う。
 RX_CHAR_UUID = "6e5f0001-8a2b-4c3d-9e1f-a5b6c7d8e9f0"
-# Peripheral -> Central。ホストから全ゲストへの通知に使う。
+# g -> Central。ホストから全ゲストへの通知に使う。
 TX_CHAR_UUID = "6e5f0002-8a2b-4c3d-9e1f-a5b6c7d8e9f0"
 
 HOST_SRC = 0x0000  # ホストの送信者タグは固定

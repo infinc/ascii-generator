@@ -5,6 +5,7 @@ import cv2
 import time
 import os
 import re
+import subprocess
 import numpy as np
 
 ASCII_CHARS_BLOCK = " ░▒▓█"
@@ -67,13 +68,50 @@ def read_image(path):
     return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
 
+def choose_file_gui(extension=None):
+    """ファイル選択ダイアログを開き、選ばれたパスを返す。キャンセル時は空文字。
+    extension を省略すると、種類を絞らずに全てのファイルを選べる。"""
+    exts = [e.lstrip(".") for e in extension.split()] if extension else []
+
+    # macOS は osascript で Finder のダイアログを出す。tkinter が無い Python でも動く。
+    if sys.platform == "darwin":
+        of_type = f' of type {{{", ".join(f'"{e}"' for e in exts)}}}' if exts else ""
+        script = (
+            f'POSIX path of (choose file with prompt "ファイルを選択"'
+            f'{of_type} default location (POSIX file "{os.getcwd()}"))'
+        )
+        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    try:
+        import tkinter
+        from tkinter import filedialog
+    except ImportError:
+        print("エラー: この環境ではファイル選択ダイアログを開けません。")
+        return ""
+    root = tkinter.Tk()
+    root.withdraw()
+    filetypes = [("対応ファイル", " ".join(f"*.{e}" for e in exts))] if exts else [("全てのファイル", "*")]
+    path = filedialog.askopenfilename(filetypes=filetypes, initialdir=os.getcwd())
+    root.destroy()
+    return path or ""
+
+
 def gain_path(extension, sample):
     print("例) cat.jpeg")
     print(f"対応している拡張子: {extension}")
+    print("何も入力せずEnterを押すと、Finderからファイルを選択できます")
     if sample != "":
         print("サンプルを使用するには、sと入力してください")
-    path = input("パス(変換したい画像): ")
-    if path == "s":
+    path = input("パス(変換したい画像): ").strip()
+    if path == "":
+        path = choose_file_gui(extension)
+        if path == "":
+            print("ファイルが選択されませんでした")
+            print("生成中止")
+            sys.exit()
+        print(f"選択したファイル: {path}")
+    elif path == "s":
         if sample == "":
             print("エラー: サンプルはありません。")
             sys.exit()
@@ -352,11 +390,11 @@ def command_list(caps=None):
     print(f"\r/cmd ... 全てのコマンドを表示します")
     print(f"\r/help ... ヘルプを表示します")
     if caps is None or caps.supports_files:
-        print(f"\r/file <file> ... ファイルを送信します(テキストベースのファイルのみ)")
+        print(f"\r/file [file] ... ファイルを送信します(テキストベースのファイルのみ、file省略時=Finderから選択)")
         print(f"\r/show ... 最新のファイルの中身を表示します")
         print(f"\r/download <[raw/png]> ... 最新のファイルを　.txt(そのまま) もしくは　.png(写真に変換)して保存します")
     if caps is None or caps.supports_generate:
-        print(f"\r/generate <path> <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(factor省略時=0.55)")
+        print(f"\r/generate [path] <[gray/color]> <width> [factor] ... すぐにASCII ARTを生成します(path省略時=Finderから選択、factor省略時=0.55)")
     print(f"\r/clear ... 画面を綺麗にします")
     print(f"\r/exit ... 会話を終了します")
 

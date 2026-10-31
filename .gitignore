@@ -7,3 +7,6 @@ __pycache__/
 /.wrangler
 /web/package-lock.json
 /.claude/settings.local.json
+
+/venv
+CLAUDE.md
